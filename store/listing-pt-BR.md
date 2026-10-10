@@ -12,7 +12,8 @@ Lembra da cobrinha do celular antigo? Ela voltou, mais rápida, mais bonita e co
 Deslize o dedo para virar, coma maçãs para crescer e não bata em nada. Simples de aprender, difícil de largar.
 
 MODOS DE JOGO
-- Clássico: avance de nível a cada 8 maçãs. Cada nível traz novos obstáculos e mais velocidade.
+- Clássico: a cobrinha de verdade. Uma tela aberta, sem fim: ela cresce sem parar e o jogo acelera.
+- Níveis: avance de nível a cada 8 maçãs. Cada nível traz novos obstáculos e mais velocidade.
 - VS CPU: duele contra uma cobra controlada pelo computador. Chegue primeiro a 15 maçãs ou faça a rival bater!
 
 PODERES

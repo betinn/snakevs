@@ -14,6 +14,7 @@ public sealed class GameSession
     private readonly Random _rng;
     private readonly int _seed;
     private double _accumulatorMs;
+    private bool _boardFilled;
 
     public GameSession(GameMode mode, Difficulty difficulty, int seed, int startLevel = 1, int? versusLayout = null)
     {
@@ -21,7 +22,7 @@ public sealed class GameSession
         Difficulty = difficulty;
         _seed = seed;
         _rng = new Random(seed);
-        Level = Math.Max(1, startLevel);
+        Level = mode == GameMode.Levels ? Math.Max(1, startLevel) : 1;
         Layout = mode == GameMode.Versus ? versusLayout ?? LevelGenerator.VersusLayouts[_rng.Next(LevelGenerator.VersusLayouts.Length)] : Level;
 
         var spawns = LevelGenerator.Spawns(mode, Rules.BoardWidth, Rules.BoardHeight);
@@ -47,7 +48,7 @@ public sealed class GameSession
     public Board Board { get; private set; }
     public int Level { get; private set; }
 
-    /// <summary>Obstacle layout in use. Equals <see cref="Level"/> in classic mode.</summary>
+    /// <summary>Obstacle layout in use. Equals <see cref="Level"/> in levels mode; endless always plays the open board.</summary>
     public int Layout { get; private set; }
 
     public Snake Player { get; }
@@ -66,7 +67,10 @@ public sealed class GameSession
 
     public IReadOnlyList<GameEvent> Events => _events;
 
-    public double StepIntervalMs => Rules.StepMs(Mode, Difficulty, Level) * (SlowMs > 0 ? Rules.SlowFactor : 1.0);
+    /// <summary>What drives speed and apple value: the level in levels mode, a tier that grows with every few apples in endless mode.</summary>
+    public int SpeedLevel => Mode == GameMode.Endless ? Rules.EndlessSpeedLevel(Player.ApplesEaten) : Level;
+
+    public double StepIntervalMs => Rules.StepMs(Mode, Difficulty, SpeedLevel) * (SlowMs > 0 ? Rules.SlowFactor : 1.0);
 
     /// <summary>Progress between the last step and the next one, in [0, 1]. Used to animate movement.</summary>
     public float StepAlpha => (float)Math.Clamp(_accumulatorMs / StepIntervalMs, 0, 1);
@@ -289,21 +293,22 @@ public sealed class GameSession
 
         if (head == Apple)
         {
+            var points = Rules.AppleValue(SpeedLevel) * multiplier;
             s.GrowPending++;
             s.ApplesEaten++;
-            var points = Rules.AppleValue(Level) * multiplier;
             s.Score += points;
             if (s.Id == PlayerId) ApplesThisLevel++;
             _events.Add(new GameEvent(GameEventType.AteApple, head, s.Id, points));
 
-            var levelDone = Mode == GameMode.Classic && ApplesThisLevel >= Rules.ApplesPerLevel;
+            var levelDone = Mode == GameMode.Levels && ApplesThisLevel >= Rules.ApplesPerLevel;
             if (!levelDone)
             {
                 var next = RandomFreeCell();
                 if (next is null)
                 {
-                    // Board is full: treat it as a cleared level / finished match.
+                    // Board is full: treat it as a cleared level / finished match / finished endless run.
                     ApplesThisLevel = Math.Max(ApplesThisLevel, Rules.ApplesPerLevel);
+                    _boardFilled = true;
                 }
                 else
                 {
@@ -417,7 +422,17 @@ public sealed class GameSession
 
     private void ResolveEndConditions()
     {
-        if (Mode == GameMode.Classic)
+        if (Mode == GameMode.Endless)
+        {
+            // No levels here: the run only ends when the snake dies (or, in theory, fills the whole board).
+            if (Player.Alive && !_boardFilled) return;
+            State = SessionState.GameOver;
+            Outcome = Player.Alive ? MatchOutcome.PlayerWon : MatchOutcome.RivalWon;
+            _events.Add(new GameEvent(GameEventType.GameOver, Player.Head, Player.Id, Player.Score));
+            return;
+        }
+
+        if (Mode == GameMode.Levels)
         {
             if (!Player.Alive)
             {

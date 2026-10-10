@@ -32,7 +32,7 @@ public class LevelGeneratorTests
     [Fact]
     public void FirstLevel_HasNoObstacles()
     {
-        var board = LevelGenerator.Create(GameMode.Classic, 1, Rules.BoardWidth, Rules.BoardHeight, seed: 1);
+        var board = LevelGenerator.Create(GameMode.Levels, 1, Rules.BoardWidth, Rules.BoardHeight, seed: 1);
         Assert.Equal(0, board.ObstacleCount);
     }
 
@@ -41,7 +41,7 @@ public class LevelGeneratorTests
     {
         for (var layout = 2; layout <= 12; layout++)
         {
-            var board = LevelGenerator.Create(GameMode.Classic, layout, Rules.BoardWidth, Rules.BoardHeight, seed: 99);
+            var board = LevelGenerator.Create(GameMode.Levels, layout, Rules.BoardWidth, Rules.BoardHeight, seed: 99);
             Assert.True(board.ObstacleCount > 0, $"Layout {layout} has no obstacles.");
         }
     }
@@ -49,8 +49,8 @@ public class LevelGeneratorTests
     [Fact]
     public void GeneratedLevels_AreDeterministicForASeed()
     {
-        var a = LevelGenerator.Create(GameMode.Classic, 9, Rules.BoardWidth, Rules.BoardHeight, seed: 42);
-        var b = LevelGenerator.Create(GameMode.Classic, 9, Rules.BoardWidth, Rules.BoardHeight, seed: 42);
+        var a = LevelGenerator.Create(GameMode.Levels, 9, Rules.BoardWidth, Rules.BoardHeight, seed: 42);
+        var b = LevelGenerator.Create(GameMode.Levels, 9, Rules.BoardWidth, Rules.BoardHeight, seed: 42);
         Assert.Equal(a.Obstacles, b.Obstacles);
     }
 
@@ -60,7 +60,7 @@ public class LevelGeneratorTests
         foreach (var layout in LevelGenerator.VersusLayouts)
         {
             var versus = LevelGenerator.Create(GameMode.Versus, layout, Rules.BoardWidth, Rules.BoardHeight, seed: 1);
-            var classic = LevelGenerator.Create(GameMode.Classic, layout, Rules.BoardWidth, Rules.BoardHeight, seed: 1);
+            var classic = LevelGenerator.Create(GameMode.Levels, layout, Rules.BoardWidth, Rules.BoardHeight, seed: 1);
             Assert.Equal(classic.ObstacleCount, versus.ObstacleCount);
         }
     }

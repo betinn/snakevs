@@ -6,7 +6,7 @@ using SnakeVs.Game.UI;
 
 namespace SnakeVs.Game.Scenes;
 
-/// <summary>The game screen for both modes: HUD, board, optional d-pad and the pause/result overlays.</summary>
+/// <summary>The game screen for all modes: HUD, board, optional d-pad and the pause/result overlays.</summary>
 public sealed class PlayScene : Scene
 {
     private const float HudHeight = 112f;
@@ -303,7 +303,7 @@ public sealed class PlayScene : Scene
     private void ShowResult()
     {
         var save = Game.Save;
-        if (_mode == GameMode.Classic)
+        if (_mode != GameMode.Versus)
         {
             _newRecord = save.SubmitScore(_mode, save.Difficulty, _session.Player.Score);
             Game.PlaySound(_newRecord ? Sfx.Win : Sfx.Lose);
@@ -430,13 +430,23 @@ public sealed class PlayScene : Scene
         var x = _hud.X + 4;
         var y = _hud.Y;
 
-        if (_mode == GameMode.Classic)
+        if (_mode != GameMode.Versus)
         {
             Font.Draw(c, t.Score, new Vector2(x, y + 6), 2.5f, Palette.TextDim);
             Font.DrawShadowed(c, player.Score.ToString(), new Vector2(x, y + 30), 6f, Palette.Text);
             var best = Math.Max(_bestBefore, player.Score);
             Font.Draw(c, $"{t.Best} {best}", new Vector2(x, y + 84), 2.5f, Palette.Gold);
+        }
 
+        if (_mode == GameMode.Endless)
+        {
+            var cx = _hud.Center.X + 10;
+            Font.DrawCentered(c, $"{t.Speed} {_session.SpeedLevel}", new Vector2(cx, y + 16), 3.5f, Palette.Text);
+            Font.DrawCentered(c, $"{t.Apples} {player.ApplesEaten}", new Vector2(cx, y + 52), 2.5f, Palette.Apple);
+            DrawEffects(c, new Vector2(cx, y + 84), player);
+        }
+        else if (_mode == GameMode.Levels)
+        {
             var cx = _hud.Center.X + 10;
             Font.DrawCentered(c, $"{t.Level} {_session.Level}", new Vector2(cx, y + 16), 3.5f, Palette.Text);
             var pips = Rules.ApplesPerLevel;
@@ -526,7 +536,12 @@ public sealed class PlayScene : Scene
         var t = Game.Text;
         var band = new RectF(_view.Area.X, _view.Area.Center.Y - 110, _view.Area.W, 220);
         c.FillRect(band, Palette.Overlay);
-        var title = _mode == GameMode.Versus ? $"{t.Versus} - {t.DifficultyName(_session.Difficulty)}" : $"{t.Level} {_session.Level}";
+        var title = _mode switch
+        {
+            GameMode.Versus => $"{t.Versus} - {t.DifficultyName(_session.Difficulty)}",
+            GameMode.Endless => t.Classic,
+            _ => $"{t.Level} {_session.Level}",
+        };
         Font.DrawCentered(c, title, new Vector2(band.Center.X, band.Y + 52), 5f, _mode == GameMode.Versus ? Palette.RivalHead : Palette.Accent);
         var hint = UseButtons ? t.ArrowToStart : t.SwipeToStart;
         var alpha = 0.6f + 0.4f * MathF.Sin(Time * 5f);
@@ -577,7 +592,7 @@ public sealed class PlayScene : Scene
         var cx = _panel.Center.X;
         var top = _panel.Y;
 
-        if (_mode == GameMode.Classic)
+        if (_mode != GameMode.Versus)
         {
             Font.DrawCentered(c, t.GameOver, new Vector2(cx, top + 80), Font.FitScale(t.GameOver, _panel.W - 60, 7f), Palette.Danger);
             Font.DrawCentered(c, t.Score, new Vector2(cx, top + 150), 3f, Palette.TextDim);
@@ -593,7 +608,8 @@ public sealed class PlayScene : Scene
                 Font.DrawCentered(c, $"{t.Best} {best}", new Vector2(cx, top + 285), 3.5f, Palette.Gold);
             }
 
-            Font.DrawCentered(c, $"{t.Level} {_session.Level}  -  {t.DifficultyName(_session.Difficulty)}", new Vector2(cx, top + 330), 2.5f, Palette.TextDim);
+            var detail = _mode == GameMode.Endless ? $"{t.Apples} {_session.Player.ApplesEaten}" : $"{t.Level} {_session.Level}";
+            Font.DrawCentered(c, $"{detail}  -  {t.DifficultyName(_session.Difficulty)}", new Vector2(cx, top + 330), 2.5f, Palette.TextDim);
         }
         else
         {

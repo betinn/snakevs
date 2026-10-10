@@ -19,7 +19,7 @@ public sealed class HelpScene : Scene
         _back = new Button(game.Text.Back, ButtonStyle.Primary) { Focused = false };
     }
 
-    private static float ContentHeight => 100 + 5 * 34 + 20 + 2 * 34 + 30 + 8 * RowHeight;
+    private float ContentHeight => 100 + Game.Text.HelpBasics.Length * 34 + 20 + Game.Text.HelpModes.Length * 34 + 30 + 8 * RowHeight;
 
     public override void Layout()
     {
@@ -58,9 +58,12 @@ public sealed class HelpScene : Scene
         }
 
         y += 20 * k;
-        foreach (var line in t.HelpVersus)
+        // The last two lines describe the duel mode and share its color.
+        for (var i = 0; i < t.HelpModes.Length; i++)
         {
-            Font.DrawCentered(c, line, new Vector2(cx, y), Font.FitScale(line, Safe.W - 60, 3f * k), Palette.RivalHead);
+            var line = t.HelpModes[i];
+            var color = i >= t.HelpModes.Length - 2 ? Palette.RivalHead : Palette.Accent;
+            Font.DrawCentered(c, line, new Vector2(cx, y), Font.FitScale(line, Safe.W - 60, 3f * k), color);
             y += 34 * k;
         }
 

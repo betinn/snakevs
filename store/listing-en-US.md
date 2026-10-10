@@ -12,7 +12,8 @@ Remember the snake game on your old phone? It is back: faster, prettier and full
 Swipe to turn, eat apples to grow and do not crash. Easy to learn, hard to put down.
 
 GAME MODES
-- Classic: level up every 8 apples. Each level brings new obstacles and more speed.
+- Classic: the real snake. One open board, no end: the snake keeps growing and the game keeps speeding up.
+- Levels: level up every 8 apples. Each level brings new obstacles and more speed.
 - VS CPU: duel a computer controlled snake. Reach 15 apples first or make your rival crash!
 
 POWER-UPS
