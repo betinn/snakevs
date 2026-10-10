@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Matches Palette.Background in the game. -->
+  <color name="background">#0D1021</color>
+  <color name="ic_launcher_background">#0D1021</color>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Android 12+ system splash screen: app icon on the game background color. -->
+  <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar.Fullscreen">
+    <item name="android:windowBackground">@color/background</item>
+    <item name="android:colorBackground">@color/background</item>
+    <item name="android:statusBarColor">@color/background</item>
+    <item name="android:navigationBarColor">@color/background</item>
+    <item name="android:windowNoTitle">true</item>
+    <item name="android:windowFullscreen">true</item>
+    <item name="android:windowSplashScreenBackground">@color/background</item>
+    <item name="android:windowSplashScreenAnimatedIcon">@mipmap/ic_launcher_foreground</item>
+    <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+  </style>
+</resources>
