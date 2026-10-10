@@ -1,3 +1,5 @@
+> Versão publicada: https://betinn.github.io/snakevs/privacy/ (fonte: `docs/privacy/index.html`). Mantenha os dois iguais.
+
 # Política de Privacidade - Snake VS
 
 Última atualização: 10 de outubro de 2026
@@ -26,7 +28,7 @@ Mudanças nesta política serão publicadas nesta página com a nova data de atu
 
 ## Contato
 
-Dúvidas: (preencher e-mail de contato)
+Dúvidas: abra uma issue em https://github.com/betinn/snakevs/issues
 
 ---
 
@@ -37,4 +39,4 @@ Last updated: October 10, 2026
 Snake VS ("the game") does **not collect, store on servers or share** any personal data. There is no account,
 no ads, no analytics and no internet access. High scores and settings are stored only on your device and are removed
 when you uninstall the game. The vibration permission is used only for in-game haptic feedback and can be turned off
-in Options. Contact: (fill in contact e-mail).
+in Options. Contact: https://github.com/betinn/snakevs/issues

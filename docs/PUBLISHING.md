@@ -61,7 +61,7 @@ adb install -r artifacts/apk/com.betinn.snakevs-Signed.apk
    - Ícone 512x512: `store/graphics/icon-512.png`
    - Gráfico de destaque 1024x500: `store/graphics/feature-graphic-1024x500.png`
    - Capturas de tela (celular e tablet): `store/screenshots/` (geradas por `SnakeVs --tour <pasta>`)
-3. **Política de privacidade**: publique `store/privacy-policy.md` (GitHub Pages, Google Sites, etc.) e cole a URL.
+3. **Política de privacidade**: URL `https://betinn.github.io/snakevs/privacy/` (GitHub Pages servindo a pasta `docs/` da `main`; fonte em `docs/privacy/index.html`).
 4. **Segurança dos dados**: responda "O app não coleta nem compartilha dados do usuário".
 5. **Classificação de conteúdo (IARC)**: jogo casual, sem violência realista, sem interação entre usuários,
    sem compras, sem anúncios. Resultado esperado: Livre / PEGI 3 / Everyone.
