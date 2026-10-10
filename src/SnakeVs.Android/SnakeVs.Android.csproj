@@ -1,0 +1,62 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>SnakeVs.Droid</RootNamespace>
+    <AssemblyName>SnakeVs</AssemblyName>
+
+    <!-- Play Store identity. Bump ApplicationVersion (versionCode) on every upload. -->
+    <ApplicationId>com.betinn.snakevs</ApplicationId>
+    <ApplicationTitle>Snake VS</ApplicationTitle>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+
+    <!-- Only the 64-bit and 32-bit ARM devices plus x86_64 emulators/Chromebooks. -->
+    <RuntimeIdentifiers>android-arm;android-arm64;android-x64</RuntimeIdentifiers>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <!-- Google Play requires an Android App Bundle. -->
+    <AndroidPackageFormat>aab</AndroidPackageFormat>
+    <AndroidLinkTool>r8</AndroidLinkTool>
+    <TrimMode>partial</TrimMode>
+    <DebugSymbols>false</DebugSymbols>
+    <DebugType>none</DebugType>
+    <AndroidUseAapt2>true</AndroidUseAapt2>
+  </PropertyGroup>
+
+  <!--
+    Release signing. Values come from environment variables (see scripts/build-android.ps1 and docs/PUBLISHING.md),
+    so no secret is ever committed.
+  -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release' And '$(SNAKEVS_KEYSTORE)' != ''">
+    <AndroidKeyStore>true</AndroidKeyStore>
+    <AndroidSigningKeyStore>$(SNAKEVS_KEYSTORE)</AndroidSigningKeyStore>
+    <AndroidSigningKeyAlias>$(SNAKEVS_KEY_ALIAS)</AndroidSigningKeyAlias>
+    <AndroidSigningStorePass>env:SNAKEVS_KEYSTORE_PASS</AndroidSigningStorePass>
+    <AndroidSigningKeyPass>env:SNAKEVS_KEY_PASS</AndroidSigningKeyPass>
+  </PropertyGroup>
+
+  <!-- Android implicit usings clash with shared game types (Button, GameMode); shared code must stay platform neutral. -->
+  <ItemGroup>
+    <Using Remove="Android.App" />
+    <Using Remove="Android.Widget" />
+    <Using Remove="Android.OS.Bundle" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="MonoGame.Framework.Android" Version="3.8.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SnakeVs.Core\SnakeVs.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Shared game code (rendering, scenes, input) is compiled into every platform head. -->
+  <ItemGroup>
+    <Compile Include="..\SnakeVs.Game\**\*.cs" Link="Game\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
