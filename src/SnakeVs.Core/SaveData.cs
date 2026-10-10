@@ -107,7 +107,15 @@ public sealed class SaveData
                     data.GamesPlayed = Math.Max(0, value);
                     break;
                 default:
-                    if (key.StartsWith("best.", StringComparison.Ordinal) && value > 0) data._best[key[5..]] = value;
+                    if (key.StartsWith("best.", StringComparison.Ordinal) && value > 0)
+                    {
+                        // Before the endless mode existed, the level based game was called "classic".
+                        const string legacy = "classic.";
+                        var name = key[5..];
+                        if (name.StartsWith(legacy, StringComparison.Ordinal)) name = "levels." + name[legacy.Length..];
+                        data._best[name] = value;
+                    }
+
                     break;
             }
         }

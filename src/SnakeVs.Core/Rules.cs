@@ -2,7 +2,12 @@ namespace SnakeVs.Core;
 
 public enum GameMode
 {
-    Classic,
+    /// <summary>Level after level: 8 apples clear a level and the next one brings new obstacles.</summary>
+    Levels,
+
+    /// <summary>The original snake: one open board, no end, the snake just keeps growing and the game keeps speeding up.</summary>
+    Endless,
+
     Versus,
 }
 
@@ -40,6 +45,7 @@ public static class Rules
 
     public const int ApplesPerLevel = 8;
     public const int VersusTargetApples = 15;
+    public const int EndlessApplesPerSpeedStep = 5;
 
     public const double LevelSpeedupMs = 7;
     public const double MinStepMs = 55;
@@ -81,6 +87,9 @@ public static class Rules
     }
 
     public static int AppleValue(int level) => AppleScore + (level - 1) * AppleScorePerLevel;
+
+    /// <summary>Speed tier of an endless run: starts at 1 and goes up every few apples.</summary>
+    public static int EndlessSpeedLevel(int applesEaten) => 1 + applesEaten / EndlessApplesPerSpeedStep;
 
     /// <summary>Chance per decision that a CPU snake picks a random move instead of the best one.</summary>
     public static double AiMistakeChance(Difficulty difficulty) => difficulty switch

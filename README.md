@@ -1,12 +1,13 @@
 # Snake VS
 
-Snake clássico com obstáculos e poderes, feito em C# com MonoGame. Alvo principal: Android (Google Play).
+Snake clássico (sem fim), modo por níveis com obstáculos e poderes, feito em C# com MonoGame. Alvo principal: Android (Google Play).
 
 ![Gráfico de destaque](store/graphics/feature-graphic-1024x500.png)
 
 ## O jogo
 
-- **Clássico**: 8 maçãs por nível. Cada nível novo traz obstáculos e mais velocidade (níveis 1-5 desenhados à mão, depois gerados por semente).
+- **Clássico**: o snake de verdade. Uma tela aberta, sem fim: a cobra cresce sem parar e o jogo acelera a cada 5 maçãs. Maçã dourada e poderes valem aqui também.
+- **Níveis**: 8 maçãs por nível. Cada nível novo traz obstáculos e mais velocidade (níveis 1-5 desenhados à mão, depois gerados por semente).
 - **VS CPU**: duelo contra uma cobra da CPU (busca em largura + flood fill para não se encurralar). Ganha quem chegar a 15 maçãs ou sobreviver.
 - **Poderes**: Lento, Fantasma (atravessa tudo), Pontos x2, Tesoura (corta a cauda), Escudo (salva de uma batida) e Maçã dourada (+50).
 - **Controles**: deslizar (padrão) ou botões na tela; teclado/gamepad no desktop.

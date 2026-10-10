@@ -4,7 +4,7 @@ namespace SnakeVs.Core.Tests;
 
 public class GameSessionTests
 {
-    private static GameSession NewClassic(int level = 1) => new(GameMode.Classic, Difficulty.Normal, seed: 7, startLevel: level);
+    private static GameSession NewClassic(int level = 1) => new(GameMode.Levels, Difficulty.Normal, seed: 7, startLevel: level);
 
     [Fact]
     public void ClassicStart_PlayerAtSpawn_ApplePlacedOnFreeCell()
@@ -257,8 +257,8 @@ public class GameSessionTests
     [Fact]
     public void HigherLevels_AreFaster()
     {
-        Assert.True(Rules.StepMs(GameMode.Classic, Difficulty.Normal, 5) < Rules.StepMs(GameMode.Classic, Difficulty.Normal, 1));
-        Assert.Equal(Rules.MinStepMs, Rules.StepMs(GameMode.Classic, Difficulty.Hard, 100));
+        Assert.True(Rules.StepMs(GameMode.Levels, Difficulty.Normal, 5) < Rules.StepMs(GameMode.Levels, Difficulty.Normal, 1));
+        Assert.Equal(Rules.MinStepMs, Rules.StepMs(GameMode.Levels, Difficulty.Hard, 100));
     }
 
     [Fact]
@@ -303,6 +303,90 @@ public class GameSessionTests
         s.Step();
 
         Assert.Equal(MatchOutcome.PlayerWon, s.Outcome);
+    }
+
+    private static GameSession NewEndless(Difficulty difficulty = Difficulty.Normal, int startLevel = 1) =>
+        new(GameMode.Endless, difficulty, seed: 7, startLevel: startLevel);
+
+    [Fact]
+    public void Endless_PlaysOnAnOpenBoard_IgnoringStartLevel()
+    {
+        var s = NewEndless(startLevel: 6);
+
+        Assert.Equal(1, s.Level);
+        Assert.Equal(0, s.Board.ObstacleCount);
+        Assert.Equal(1, s.SpeedLevel);
+    }
+
+    [Fact]
+    public void Endless_NeverClearsALevel_AndKeepsGrowing()
+    {
+        var s = NewEndless();
+        var apples = Rules.ApplesPerLevel * 2;
+        for (var i = 0; i < apples; i++)
+        {
+            Assert.Equal(SessionState.Playing, s.State);
+            s.PlaceAppleForTest(s.Player.Head + s.Player.Heading.ToOffset());
+            s.Step();
+        }
+
+        Assert.Equal(SessionState.Playing, s.State);
+        Assert.Equal(apples, s.Player.ApplesEaten);
+        Assert.Equal(1, s.Level);
+        Assert.DoesNotContain(s.Events, e => e.Type == GameEventType.LevelCleared);
+        Assert.Equal(Rules.StartLength + apples, s.Player.Length + s.Player.GrowPending);
+    }
+
+    [Fact]
+    public void Endless_SpeedsUpWithApples_ButStaysOnTheSameBoard()
+    {
+        var s = NewEndless();
+        var slow = s.StepIntervalMs;
+
+        s.Player.ApplesEaten = Rules.EndlessApplesPerSpeedStep * 3;
+
+        Assert.Equal(4, s.SpeedLevel);
+        Assert.True(s.StepIntervalMs < slow);
+        Assert.Equal(Rules.StepMs(GameMode.Endless, Difficulty.Normal, 4), s.StepIntervalMs);
+    }
+
+    [Fact]
+    public void Endless_ApplesWorthMoreAsSpeedGrows()
+    {
+        var s = NewEndless();
+        s.Player.ApplesEaten = Rules.EndlessApplesPerSpeedStep * 2;
+        s.PlaceAppleForTest(s.Player.Head + s.Player.Heading.ToOffset());
+
+        s.Step();
+
+        Assert.Equal(Rules.AppleValue(3), s.Player.Score);
+    }
+
+    [Fact]
+    public void Endless_PowerUpsAndGoldenStillWork()
+    {
+        var s = NewEndless();
+        s.PlaceAppleForTest(new Int2(0, 0));
+        s.PlacePowerUpForTest(s.Player.Head + s.Player.Heading.ToOffset(), PowerUpKind.Shield);
+        s.Step();
+        Assert.Equal(1, s.Player.Shields);
+
+        s.PlaceGoldenForTest(s.Player.Head + s.Player.Heading.ToOffset());
+        var before = s.Player.Score;
+        s.Step();
+        Assert.Equal(before + Rules.GoldenScore, s.Player.Score);
+    }
+
+    [Fact]
+    public void Endless_Crashing_EndsTheRun()
+    {
+        var s = NewEndless();
+        s.PlaceAppleForTest(new Int2(0, 0));
+
+        for (var i = 0; i < 40 && s.State == SessionState.Playing; i++) s.Step();
+
+        Assert.Equal(SessionState.GameOver, s.State);
+        Assert.Contains(s.Events, e => e.Type == GameEventType.GameOver);
     }
 
     /// <summary>Drives the player around a 2x2 loop (always into its own moving tail) for the given time.</summary>

@@ -7,6 +7,8 @@ namespace SnakeVs.Game.Localization;
 public sealed class Strings
 {
     public required string Classic { get; init; }
+    public required string Levels { get; init; }
+    public required string Speed { get; init; }
     public required string Versus { get; init; }
     public required string Options { get; init; }
     public required string HowToPlay { get; init; }
@@ -49,7 +51,7 @@ public sealed class Strings
     public required string Apples { get; init; }
     public required string ShieldSaved { get; init; }
     public required string[] HelpBasics { get; init; }
-    public required string[] HelpVersus { get; init; }
+    public required string[] HelpModes { get; init; }
     public required string[] PowerUpNames { get; init; }
     public required string[] PowerUpHelp { get; init; }
     public required string GoldenName { get; init; }
@@ -72,6 +74,8 @@ public sealed class Strings
     public static readonly Strings Portuguese = new()
     {
         Classic = "CLÁSSICO",
+        Levels = "NÍVEIS",
+        Speed = "VELOCIDADE",
         Versus = "VS CPU",
         Options = "OPÇÕES",
         HowToPlay = "COMO JOGAR",
@@ -110,7 +114,7 @@ public sealed class Strings
         Off = "DESLIGADO",
         Record = "RECORDE",
         WinsLosses = "V/D",
-        Tagline = "CLÁSSICO COM OBSTÁCULOS E PODERES",
+        Tagline = "CLÁSSICO, NÍVEIS E PODERES",
         Apples = "MAÇÃS",
         ShieldSaved = "ESCUDO!",
         HelpBasics =
@@ -119,10 +123,12 @@ public sealed class Strings
             "COMA MAÇÃS PARA CRESCER.",
             "NÃO BATA NAS PAREDES, NOS",
             "BLOCOS NEM NO PRÓPRIO CORPO.",
-            "8 MAÇÃS = PRÓXIMO NÍVEL.",
         ],
-        HelpVersus =
+        HelpModes =
         [
+            "CLÁSSICO: SEM FIM. A COBRA CRESCE",
+            "E O JOGO ACELERA A CADA MAÇÃ.",
+            "NÍVEIS: 8 MAÇÃS = PRÓXIMO NÍVEL.",
             "VS CPU: CHEGUE A 15 MAÇÃS",
             "ANTES DA CPU OU FAÇA ELA BATER.",
         ],
@@ -144,6 +150,8 @@ public sealed class Strings
     public static readonly Strings English = new()
     {
         Classic = "CLASSIC",
+        Levels = "LEVELS",
+        Speed = "SPEED",
         Versus = "VS CPU",
         Options = "OPTIONS",
         HowToPlay = "HOW TO PLAY",
@@ -182,7 +190,7 @@ public sealed class Strings
         Off = "OFF",
         Record = "BEST",
         WinsLosses = "W/L",
-        Tagline = "CLASSIC WITH OBSTACLES AND POWER-UPS",
+        Tagline = "CLASSIC, LEVELS AND POWER-UPS",
         Apples = "APPLES",
         ShieldSaved = "SHIELD!",
         HelpBasics =
@@ -191,10 +199,12 @@ public sealed class Strings
             "EAT APPLES TO GROW.",
             "DO NOT HIT THE WALLS, THE",
             "BLOCKS OR YOUR OWN BODY.",
-            "8 APPLES = NEXT LEVEL.",
         ],
-        HelpVersus =
+        HelpModes =
         [
+            "CLASSIC: NO END. THE SNAKE GROWS",
+            "AND THE GAME SPEEDS UP WITH EVERY APPLE.",
+            "LEVELS: 8 APPLES = NEXT LEVEL.",
             "VS CPU: REACH 15 APPLES",
             "FIRST OR MAKE THE CPU CRASH.",
         ],

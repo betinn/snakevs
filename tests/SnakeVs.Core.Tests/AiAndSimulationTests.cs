@@ -7,7 +7,7 @@ public class AiAndSimulationTests
     [Fact]
     public void Ai_NeverTurnsBackwards()
     {
-        var s = new GameSession(GameMode.Classic, Difficulty.Normal, seed: 11);
+        var s = new GameSession(GameMode.Levels, Difficulty.Normal, seed: 11);
         var rng = new Random(1);
         foreach (var heading in Directions.All)
         {
@@ -20,7 +20,7 @@ public class AiAndSimulationTests
     [Fact]
     public void Ai_AvoidsWallWhenFacingIt()
     {
-        var s = new GameSession(GameMode.Classic, Difficulty.Hard, seed: 11);
+        var s = new GameSession(GameMode.Levels, Difficulty.Hard, seed: 11);
         s.PlaceAppleForTest(new Int2(19, 29));
         s.Player.Reset(new Int2(10, 0), Direction.Up, 4);
 
@@ -32,7 +32,7 @@ public class AiAndSimulationTests
     [Fact]
     public void Ai_HeadsTowardsTheApple()
     {
-        var s = new GameSession(GameMode.Classic, Difficulty.Hard, seed: 11);
+        var s = new GameSession(GameMode.Levels, Difficulty.Hard, seed: 11);
         s.Player.Reset(new Int2(10, 15), Direction.Up, 4);
         s.PlaceAppleForTest(new Int2(2, 15));
 
@@ -59,15 +59,19 @@ public class AiAndSimulationTests
     /// broken invariants across levels, modes, power-ups and difficulties.
     /// </summary>
     [Theory]
-    [InlineData(GameMode.Classic, Difficulty.Easy)]
-    [InlineData(GameMode.Classic, Difficulty.Normal)]
-    [InlineData(GameMode.Classic, Difficulty.Hard)]
+    [InlineData(GameMode.Levels, Difficulty.Easy)]
+    [InlineData(GameMode.Levels, Difficulty.Normal)]
+    [InlineData(GameMode.Levels, Difficulty.Hard)]
+    [InlineData(GameMode.Endless, Difficulty.Easy)]
+    [InlineData(GameMode.Endless, Difficulty.Normal)]
+    [InlineData(GameMode.Endless, Difficulty.Hard)]
     [InlineData(GameMode.Versus, Difficulty.Easy)]
     [InlineData(GameMode.Versus, Difficulty.Normal)]
     [InlineData(GameMode.Versus, Difficulty.Hard)]
     public void Soak_AutoplayedGames_KeepInvariants(GameMode mode, Difficulty difficulty)
     {
         var maxLevel = 0;
+        var maxApples = 0;
         var outcomes = new Dictionary<MatchOutcome, int>();
         for (var game = 0; game < 25; game++)
         {
@@ -86,12 +90,18 @@ public class AiAndSimulationTests
             }
 
             maxLevel = Math.Max(maxLevel, s.Level);
+            maxApples = Math.Max(maxApples, s.Player.ApplesEaten);
             outcomes[s.Outcome] = outcomes.GetValueOrDefault(s.Outcome) + 1;
         }
 
-        if (mode == GameMode.Classic)
+        if (mode == GameMode.Levels)
         {
             Assert.True(maxLevel >= 3, $"Autoplay never got past level {maxLevel}; AI or level flow is broken.");
+        }
+        else if (mode == GameMode.Endless)
+        {
+            Assert.Equal(1, maxLevel);
+            Assert.True(maxApples >= 25, $"Autoplay only ate {maxApples} apples in endless mode.");
         }
         else
         {

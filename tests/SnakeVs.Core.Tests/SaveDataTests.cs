@@ -18,7 +18,7 @@ public class SaveDataTests
             VersusDraws = 1,
             GamesPlayed = 9,
         };
-        data.SubmitScore(GameMode.Classic, Difficulty.Hard, 1234);
+        data.SubmitScore(GameMode.Levels, Difficulty.Hard, 1234);
         data.SubmitScore(GameMode.Versus, Difficulty.Easy, 7);
 
         var copy = SaveData.Parse(data.Serialize());
@@ -31,9 +31,9 @@ public class SaveDataTests
         Assert.Equal(2, copy.VersusLosses);
         Assert.Equal(1, copy.VersusDraws);
         Assert.Equal(9, copy.GamesPlayed);
-        Assert.Equal(1234, copy.GetBest(GameMode.Classic, Difficulty.Hard));
+        Assert.Equal(1234, copy.GetBest(GameMode.Levels, Difficulty.Hard));
         Assert.Equal(7, copy.GetBest(GameMode.Versus, Difficulty.Easy));
-        Assert.Equal(0, copy.GetBest(GameMode.Classic, Difficulty.Easy));
+        Assert.Equal(0, copy.GetBest(GameMode.Levels, Difficulty.Easy));
     }
 
     [Fact]
@@ -41,12 +41,12 @@ public class SaveDataTests
     {
         var data = new SaveData();
 
-        Assert.True(data.SubmitScore(GameMode.Classic, Difficulty.Normal, 100));
-        Assert.False(data.SubmitScore(GameMode.Classic, Difficulty.Normal, 50));
-        Assert.False(data.SubmitScore(GameMode.Classic, Difficulty.Normal, 100));
-        Assert.True(data.SubmitScore(GameMode.Classic, Difficulty.Normal, 101));
-        Assert.False(data.SubmitScore(GameMode.Classic, Difficulty.Normal, 0));
-        Assert.Equal(101, data.GetBest(GameMode.Classic, Difficulty.Normal));
+        Assert.True(data.SubmitScore(GameMode.Levels, Difficulty.Normal, 100));
+        Assert.False(data.SubmitScore(GameMode.Levels, Difficulty.Normal, 50));
+        Assert.False(data.SubmitScore(GameMode.Levels, Difficulty.Normal, 100));
+        Assert.True(data.SubmitScore(GameMode.Levels, Difficulty.Normal, 101));
+        Assert.False(data.SubmitScore(GameMode.Levels, Difficulty.Normal, 0));
+        Assert.Equal(101, data.GetBest(GameMode.Levels, Difficulty.Normal));
     }
 
     [Theory]
@@ -61,7 +61,17 @@ public class SaveDataTests
         Assert.Equal(Difficulty.Normal, data.Difficulty);
         Assert.True(data.SoundOn);
         Assert.Equal(ControlScheme.Swipe, data.Controls);
-        Assert.Equal(0, data.GetBest(GameMode.Classic, Difficulty.Normal));
+        Assert.Equal(0, data.GetBest(GameMode.Levels, Difficulty.Normal));
+    }
+
+    [Fact]
+    public void Parse_OldClassicRecords_BecomeLevelsRecords()
+    {
+        var data = SaveData.Parse("best.classic.hard=900\nbest.endless.hard=40");
+
+        Assert.Equal(900, data.GetBest(GameMode.Levels, Difficulty.Hard));
+        Assert.Equal(40, data.GetBest(GameMode.Endless, Difficulty.Hard));
+        Assert.Contains("best.levels.hard=900", data.Serialize());
     }
 
     [Fact]
