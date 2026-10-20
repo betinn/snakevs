@@ -8,7 +8,7 @@
     <AssemblyName>SnakeVs</AssemblyName>
 
     <!-- Play Store identity. Bump ApplicationVersion (versionCode) on every upload. -->
-    <ApplicationId>com.betinn.snakevs</ApplicationId>
+    <ApplicationId>com.devolib.snakevs</ApplicationId>
     <ApplicationTitle>Snake VS</ApplicationTitle>
     <ApplicationVersion>1</ApplicationVersion>
     <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>

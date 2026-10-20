@@ -5,7 +5,7 @@
 .DESCRIPTION
   Reads signing data from %USERPROFILE%\.snakevs-keys\snakevs-upload.properties (see create-keystore.ps1)
   or from the environment variables SNAKEVS_KEYSTORE, SNAKEVS_KEY_ALIAS, SNAKEVS_KEYSTORE_PASS, SNAKEVS_KEY_PASS.
-  Runs the unit tests first. Output: artifacts\android\com.betinn.snakevs-Signed.aab
+  Runs the unit tests first. Output: artifacts\android\com.devolib.snakevs-Signed.aab
 
 .PARAMETER VersionCode
   Optional versionCode override (must grow on every Play upload).

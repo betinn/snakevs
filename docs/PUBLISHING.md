@@ -29,14 +29,14 @@ Em CI, use variáveis de ambiente em vez do arquivo: `SNAKEVS_KEYSTORE`, `SNAKEV
 ./scripts/build-android.ps1 -VersionCode 2 -VersionName 1.0.1  # próximas versões
 ```
 
-Saída: `artifacts/android/com.betinn.snakevs-Signed.aab`. O `versionCode` precisa aumentar a cada envio.
+Saída: `artifacts/android/com.devolib.snakevs-Signed.aab`. O `versionCode` precisa aumentar a cada envio.
 O padrão fica em `src/SnakeVs.Android/SnakeVs.Android.csproj` (`ApplicationVersion` / `ApplicationDisplayVersion`).
 
 APK assinado para instalar direto num aparelho:
 
 ```powershell
 dotnet publish src/SnakeVs.Android -c Release -p:AndroidPackageFormat=apk -o artifacts/apk
-adb install -r artifacts/apk/com.betinn.snakevs-Signed.apk
+adb install -r artifacts/apk/com.devolib.snakevs-Signed.apk
 ```
 
 ## 4. Requisitos da Play já atendidos
@@ -70,7 +70,7 @@ adb install -r artifacts/apk/com.betinn.snakevs-Signed.apk
 7. **Anúncios**: "Não, o app não contém anúncios".
 8. **Teste**: contas pessoais novas precisam de *teste fechado* com pelo menos 12 testadores por 14 dias
    antes de liberar a produção. Envie o AAB primeiro na faixa de teste fechado.
-9. **Produção**: crie a versão, envie `com.betinn.snakevs-Signed.aab`, preencha as notas da versão e envie para revisão.
+9. **Produção**: crie a versão, envie `com.devolib.snakevs-Signed.aab`, preencha as notas da versão e envie para revisão.
 
 ## 6. Checklist antes de cada envio
 

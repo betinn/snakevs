@@ -12,7 +12,7 @@
 param(
     [string]$KeyDir = (Join-Path $env:USERPROFILE ".snakevs-keys"),
     [string]$Alias = "snakevs-upload",
-    [string]$DName = "CN=Snake VS, OU=Games, O=betinn, C=BR"
+    [string]$DName = "CN=Snake VS, OU=Games, O=Devolib, C=BR"
 )
 
 $ErrorActionPreference = "Stop"

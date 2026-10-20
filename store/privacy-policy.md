@@ -4,7 +4,7 @@
 
 Última atualização: 10 de outubro de 2026
 
-O Snake VS ("o jogo") é desenvolvido por betinn.
+O Snake VS ("o jogo") é desenvolvido por Devolib.
 
 ## Dados coletados
 
