@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0-android</TargetFramework>
-    <SupportedOSPlatformVersion>23</SupportedOSPlatformVersion>
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
     <OutputType>Exe</OutputType>
     <RootNamespace>SnakeVs.Droid</RootNamespace>
     <AssemblyName>SnakeVs</AssemblyName>
