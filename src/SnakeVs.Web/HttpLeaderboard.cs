@@ -6,7 +6,7 @@ using SnakeVs.Game.Online;
 
 namespace SnakeVs.Web;
 
-/// <summary>Online ranking through SnakeVs.Server's /api/scores, with an HTML name dialog (native keyboard on phones).</summary>
+/// <summary>Online ranking through the /api/scores server (src/SnakeVs.Api), with an HTML name dialog (native keyboard on phones).</summary>
 internal sealed class HttpLeaderboard(HttpClient http, IJSRuntime js) : ILeaderboard
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(12);

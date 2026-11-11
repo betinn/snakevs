@@ -13,7 +13,10 @@ public sealed record ScoreEntry(long Id, int Rank, string Name, int Score, int A
 /// <summary>Answer to a submission: the new entry and its position in its ranking.</summary>
 public sealed record SubmitResult(long Id, int Rank, int Total);
 
-/// <summary>Rules shared by the game and the server for the online ranking.</summary>
+/// <summary>
+/// Rules of the online ranking. The server (src/SnakeVs.Api, Rust) has a port of NormalizeName/IsPlausible; both are
+/// held to tests/fixtures/leaderboard.json (see LeaderboardFixtureTests). Change here, regenerate, fix the server.
+/// </summary>
 public static class Leaderboard
 {
     public const int NameMaxLength = 12;
@@ -76,7 +79,7 @@ public static class Leaderboard
         if (s.Apples > s.Steps) return false;
 
         int topLevel;
-        long levelBonus = 0;
+        Int128 levelBonus = 0;
         if (s.Mode == GameMode.Endless)
         {
             if (s.Apples > boardCells || s.Level != 1) return false;
@@ -84,14 +87,15 @@ public static class Leaderboard
         }
         else
         {
-            // Levels: 8 apples per level, a run ends in the level it reached.
+            // Levels: 8 apples per level, a run ends in the level it reached. Clearing level l pays LevelBonus * l.
             if (s.Level > s.Apples / Rules.ApplesPerLevel + 1) return false;
             topLevel = s.Level;
-            for (var l = 1; l < s.Level; l++) levelBonus += (long)Rules.LevelBonus * l;
+            levelBonus = (Int128)Rules.LevelBonus * (s.Level - 1) * s.Level / 2;
         }
 
-        long perApple = 2L * (Rules.AppleValue(topLevel) + Rules.GoldenScore + Rules.PowerUpScore);
-        return s.Score <= s.Apples * perApple + levelBonus;
+        // 128-bit math: huge (fake) inputs must not overflow. Same formula as src/SnakeVs.Api/src/rules.rs.
+        Int128 perApple = 2 * ((Int128)Rules.AppleValue(topLevel) + Rules.GoldenScore + Rules.PowerUpScore);
+        return s.Score <= (Int128)s.Apples * perApple + levelBonus;
     }
 }
 

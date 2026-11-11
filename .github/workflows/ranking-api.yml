@@ -1,0 +1,61 @@
+# Builds the ranking server (src/SnakeVs.Api, Rust) as static Linux binaries: no runtime needed on the VM.
+# Download from the run's "Artifacts" section, copy to the VM and follow docs/WEB.md.
+name: ranking-api
+
+on:
+  push:
+    paths:
+      - "src/SnakeVs.Api/**"
+      - "tests/fixtures/leaderboard.json"
+      - ".github/workflows/ranking-api.yml"
+  pull_request:
+    paths:
+      - "src/SnakeVs.Api/**"
+      - "tests/fixtures/leaderboard.json"
+      - ".github/workflows/ranking-api.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: src/SnakeVs.Api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Toolchain
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+          rustup target add x86_64-unknown-linux-musl aarch64-unknown-linux-musl
+          # Zig is the C cross compiler for SQLite (ARM64 and static musl builds), installed from PyPI.
+          python3 -m venv "$RUNNER_TEMP/zig"
+          "$RUNNER_TEMP/zig/bin/pip" install ziglang
+          echo "$RUNNER_TEMP/zig/bin" >> "$GITHUB_PATH"
+          cargo install --locked cargo-zigbuild
+
+      - name: Test (routes + same rules as the game)
+        run: cargo test --locked
+
+      - name: Build static binaries
+        run: |
+          for t in x86_64-unknown-linux-musl aarch64-unknown-linux-musl; do
+            cargo zigbuild --locked --release --target "$t"
+          done
+          mkdir -p ../../out/x64 ../../out/arm64
+          cp target/x86_64-unknown-linux-musl/release/snakevs-api ../../out/x64/
+          cp target/aarch64-unknown-linux-musl/release/snakevs-api ../../out/arm64/
+          for d in x64 arm64; do cp deploy/* ../../out/$d/; done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snakevs-api-linux-x64
+          path: out/x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: snakevs-api-linux-arm64
+          path: out/arm64

@@ -2,7 +2,17 @@
 
 A versão web é o mesmo jogo do app, abrindo direto no menu do jogo (sem landing page). Roda no navegador com
 WebAssembly + WebGL. Tem um **ranking online** (só na web): ao fim de cada partida do Clássico ou de Níveis o jogador
-pode salvar a pontuação com nome/apelido, guardada em SQLite no servidor.
+pode salvar a pontuação com nome/apelido.
+
+Na VM ficam só duas coisas:
+
+| Peça | O que é | Custo na VM |
+|---|---|---|
+| Jogo | Arquivos estáticos (`artifacts/web/wwwroot`) servidos pelo nginx | Nenhum processo próprio (o nginx já existe) |
+| Ranking | `snakevs-api`: binário Rust estático de ~2,3 MB + um arquivo SQLite | ~2–5 MB de RAM, CPU só quando alguém salva/abre o ranking |
+
+Medido aqui com 16 mil requisições (8 clientes simultâneos): `snakevs-api` foi de 4,7 para 5,3 MB de RAM e gastou 2 s de
+CPU no total. O servidor ASP.NET que existia antes, com a mesma carga, foi de 65 para 122 MB e gastou 9 s de CPU.
 
 ## Como funciona
 
@@ -11,7 +21,7 @@ pode salvar a pontuação com nome/apelido, guardada em SQLite no servidor.
 | `SnakeVs.Core` | Regras, IA, níveis e save (os mesmos do Android) + contrato do ranking (`Leaderboard.cs`: DTOs, regra de apelido, checagem de pontuação, JSON). |
 | `SnakeVs.Game` | Telas, render, fonte, input e áudio: os mesmos arquivos do app. Ranking: `Online/ILeaderboard.cs`, `Scenes/RankingScene.cs` e o botão no fim da partida (`PlayScene`). Só aparece onde a plataforma oferece ranking. |
 | `SnakeVs.Web` | Host do navegador: `WebPlatform.cs`, `HttpLeaderboard.cs`, `wwwroot/index.html` e `wwwroot/js/snakevs.js`. |
-| `SnakeVs.Server` | ASP.NET Core: serve o jogo e a API `/api/scores` com SQLite (`ScoreStore.cs`). |
+| `SnakeVs.Api` | Servidor do ranking em Rust: `src/rules.rs` (regras), `src/lib.rs` (rotas + SQLite), `src/main.rs` (HTTP mínimo), `deploy/` (nginx + systemd). |
 
 - Motor: [KNI](https://github.com/kniEngine/kni), compatível com a API XNA/MonoGame usada pelo jogo e com suporte a
   Blazor WebAssembly/WebGL. Android e desktop continuam no MonoGame. A única diferença de API entre os dois está em
@@ -36,132 +46,123 @@ pode salvar a pontuação com nome/apelido, guardada em SQLite no servidor.
 - Menu: botão **Ranking** com abas Clássico/Níveis e Fácil/Normal/Difícil (top 10 de cada).
 - VS CPU não entra: o resultado é vitória/derrota, não pontuação.
 - Apelido: até 12 caracteres, maiúsculas, letras (com acentos do português, Ñ e Ü), números, espaço, `.`, `-`, `_`
-  (o que a fonte pixel desenha). A mesma regra roda no navegador, no jogo e no servidor (`Leaderboard.NormalizeName`).
-  Empates ficam com quem chegou primeiro.
+  (o que a fonte pixel desenha). Empates ficam com quem chegou primeiro.
 
-### API
+### API (`snakevs-api`)
 
 | Método | Rota | |
 |---|---|---|
 | `GET` | `/api/scores/{endless\|levels}/{easy\|normal\|hard}?take=10` | Top N (máx. 50). |
 | `POST` | `/api/scores` | `{ mode, difficulty, name, score, apples, level, steps }` → `201 { id, rank, total }`. |
-| `DELETE` | `/api/scores/{id}` | Moderação, com header `X-Admin-Key`. Desligado enquanto `Leaderboard:AdminKey` estiver vazio. |
+| `DELETE` | `/api/scores/{id}` | Moderação, header `X-Admin-Key`. Desligado sem `SNAKEVS_ADMIN_KEY`. |
+| `GET` | `/api/health` | `ok` (para monitoramento). |
 
-Proteções:
+Configuração por variáveis de ambiente (todas opcionais):
 
-- O servidor normaliza o apelido e confere se a pontuação é possível pelas regras do jogo (`Leaderboard.IsPlausible`:
-  pontos por maçã, bônus, níveis, passos). Um teste joga dezenas de partidas reais com a IA e garante que nenhuma
-  pontuação legítima é recusada.
-- Limite por IP: 6 envios e 120 leituras por minuto (`Leaderboard:SubmitsPerMinute` / `ReadsPerMinute`).
+| Variável | Padrão | |
+|---|---|---|
+| `SNAKEVS_LISTEN` | `127.0.0.1:5090` | Endereço. Deixe em 127.0.0.1: só o nginx fala com ele. |
+| `SNAKEVS_DB` | `./scores.db` | Arquivo SQLite (criado na primeira execução). |
+| `SNAKEVS_ADMIN_KEY` | (vazio) | Liga o `DELETE`. |
+| `SNAKEVS_ALLOWED_ORIGINS` | (vazio) | Sites (separados por vírgula) que podem chamar a API de outro domínio. |
+| `SNAKEVS_SUBMITS_PER_MINUTE` / `SNAKEVS_READS_PER_MINUTE` | `6` / `120` | Limite por IP. |
+| `SNAKEVS_THREADS` | `4` | Conexões atendidas ao mesmo tempo. |
+
+### Regras iguais no jogo e no servidor
+
+A checagem de apelido e de pontuação existe em C# (`Leaderboard.cs`, usada pelo jogo) e em Rust (`rules.rs`, no
+servidor). O arquivo `tests/fixtures/leaderboard.json` guarda os casos e as respostas certas, **gerados pelo C#**:
+
+- `LeaderboardFixtureTests` (C#) falha se as regras do jogo mudarem e o fixture não for regenerado;
+- `cargo test` (Rust) falha se o servidor não bater com o fixture;
+- o fixture inclui 36 partidas reais jogadas pela IA: o servidor tem que aceitar todas.
+
+Mudou `Rules.cs` ou `Leaderboard.cs`? Rode
+`SNAKEVS_UPDATE_FIXTURES=1 dotnet test tests/SnakeVs.Core.Tests --filter LeaderboardFixture`, depois
+`cd src/SnakeVs.Api && cargo test` e ajuste `rules.rs` até passar.
+
+### Proteções e limites
+
+- Apelido normalizado e pontuação conferida contra as regras do jogo (pontos por maçã, bônus, níveis, passos).
+- Limite por IP (atrás do nginx, o IP real vem no `X-Forwarded-For`, aceito só de conexões locais).
+- Corpo máximo de 4 KB, timeouts de 5 s, número fixo de threads.
 - **Limite honesto**: o jogo roda no navegador, então quem souber chamar a API consegue enviar uma pontuação
-  inventada dentro do plausível. A checagem barra o absurdo; o resto é moderação (`DELETE`).
-- Não há filtro de palavrões. Para remover um apelido ofensivo:
+  inventada dentro do plausível. A checagem barra o absurdo; o resto é moderação.
+- Não há filtro de palavrões. Para remover um apelido:
   `curl -X DELETE https://seu-site/api/scores/123 -H "X-Admin-Key: <chave>"` (o `id` aparece no `GET`).
-
-### Banco
-
-SQLite em `App_Data/scores.db` (relativo à pasta do servidor; mude em `Leaderboard:DatabasePath`). O arquivo e a
-tabela são criados na primeira execução. Modo WAL: leituras não esperam escritas.
-
-- A pasta precisa de permissão de escrita para o usuário do serviço (IIS: `IIS AppPool\<pool>`; Linux: o usuário do systemd).
-- Backup a quente: `sqlite3 App_Data/scores.db ".backup scores-backup.db"` (copiar só o `.db` com o serviço rodando
-  pode perder o que ainda está no `-wal`).
-- Um deploy novo **não** pode sobrescrever `App_Data/` (o publish não inclui essa pasta).
 
 ## Rodar localmente
 
 ```powershell
-dotnet run --project src/SnakeVs.Server     # jogo + ranking em http://localhost:5090
-dotnet run --project src/SnakeVs.Web        # só o jogo (sem ranking) em http://localhost:5080
+cd src/SnakeVs.Api; $env:SNAKEVS_ALLOWED_ORIGINS="http://localhost:5080"; cargo run    # API em :5090
+dotnet run --project src/SnakeVs.Web                                                    # jogo em :5080
+# abrir http://localhost:5080/?api=http://localhost:5090/
 ```
 
-## Gerar o site
+O `?api=` só funciona em `localhost` (um link não consegue apontar o jogo publicado para outra API). Sem ele, o jogo
+local abre com o ranking indisponível.
+
+## Gerar
+
+**Jogo** (site estático):
 
 ```powershell
-./scripts/build-web.ps1                                   # testes + jogo com ranking (servidor) em artifacts/web
-./scripts/build-web.ps1 -StaticOnly                       # só o jogo, site estático, ranking desligado
-./scripts/build-web.ps1 -StaticOnly -ApiUrl https://api.exemplo.com/   # estático usando um servidor de ranking em outro lugar
+./scripts/build-web.ps1                                     # testes + publish em artifacts/web/wwwroot (ranking em /api/ do mesmo site)
+./scripts/build-web.ps1 -NoRanking                          # sem ranking
+./scripts/build-web.ps1 -ApiUrl https://api.exemplo.com/    # ranking em outro domínio
 ```
 
-Download inicial do jogo: ~2,6 MB com Brotli (o .NET + o jogo). Depois disso o navegador usa o cache.
+**Ranking**: o workflow **ranking-api** do GitHub Actions compila a cada push em `src/SnakeVs.Api` (ou manualmente em
+Actions > ranking-api > Run workflow), roda os testes e publica os artefatos `snakevs-api-linux-x64` e
+`snakevs-api-linux-arm64` (binário estático + arquivos de `deploy/`). Use o da arquitetura da VM (`uname -m`:
+`x86_64` ou `aarch64`). Não é preciso instalar Rust na VM.
 
-O endereço da API fica no `index.html`: `<meta name="snakevs-api" content="" />`. Vazio = mesmo site (padrão,
-`SnakeVs.Server`); uma URL = servidor em outro domínio; `off` = sem ranking (o botão some do menu e do fim da partida).
+Para compilar na sua máquina: `rustup target add x86_64-unknown-linux-musl`, `pip install ziglang`,
+`cargo install cargo-zigbuild` e `cargo zigbuild --release --target x86_64-unknown-linux-musl` (funciona no Windows).
 
-## Hospedagem com ranking (recomendado)
+## Instalar na VM (nginx + systemd)
 
-`artifacts/web` é um app ASP.NET Core 10 completo: serve o jogo (já comprimido em Brotli/gzip, com cache longo para
-os arquivos com hash) e a API. Precisa de um host que rode .NET 10.
+1. **Jogo**: copie o conteúdo de `artifacts/web/wwwroot` para `/var/www/snakevs`.
+2. **Ranking**:
+   ```sh
+   sudo install -m 755 snakevs-api /usr/local/bin/
+   sudo cp snakevs-api.service /etc/systemd/system/
+   echo "SNAKEVS_ADMIN_KEY=$(openssl rand -hex 24)" | sudo tee /etc/snakevs-api.env && sudo chmod 600 /etc/snakevs-api.env
+   sudo systemctl daemon-reload && sudo systemctl enable --now snakevs-api
+   curl http://127.0.0.1:5090/api/health      # ok
+   ```
+   O serviço roda com usuário próprio e descartável, prioridade de CPU baixa (`Nice=10`), memória limitada a 32 MB e
+   disco somente leitura, exceto `/var/lib/snakevs` (onde fica o `scores.db`).
+3. **nginx**: use `deploy/nginx-snakevs.conf` (ajuste `server_name`), habilite e `sudo nginx -t && sudo systemctl reload nginx`.
+   HTTPS: `sudo certbot --nginx -d jogo.exemplo.com`. O nginx entrega os arquivos `.gz` já comprimidos pelo publish
+   (sem gastar CPU) e manda `/api/` para o `snakevs-api`.
 
-### Linux (VPS) com systemd + nginx
+Atualizar:
 
-```ini
-# /etc/systemd/system/snakevs.service
-[Unit]
-Description=Snake VS
-After=network.target
+- **Jogo**: substitua os arquivos de `/var/www/snakevs`.
+- **Ranking**: `sudo install -m 755 snakevs-api /usr/local/bin/ && sudo systemctl restart snakevs-api`.
+- O banco não é tocado em nenhum dos dois casos.
 
-[Service]
-WorkingDirectory=/var/www/snakevs
-ExecStart=/usr/bin/dotnet /var/www/snakevs/SnakeVs.Server.dll --urls http://127.0.0.1:5090
-User=www-data
-Restart=always
-Environment=ASPNETCORE_ENVIRONMENT=Production
-Environment=Leaderboard__AdminKey=troque-por-uma-chave-longa
+Logs: `journalctl -u snakevs-api`. Backup a quente (`sudo apt install sqlite3`): `sudo sqlite3 /var/lib/snakevs/scores.db ".backup /root/scores-backup.db"`.
 
-[Install]
-WantedBy=multi-user.target
-```
+Se a VM usa **Apache** em vez de nginx: sirva `/var/www/snakevs` (o `.htaccess` incluído cuida de tipos, `.gz`/`.br` e
+cache) e adicione `ProxyPass "/api/" "http://127.0.0.1:5090/api/"` (`a2enmod proxy proxy_http`); o Apache já acrescenta
+o `X-Forwarded-For` que o limite por IP usa.
 
-```nginx
-server {
-    listen 443 ssl;
-    server_name jogo.exemplo.com;
+### Sem ranking ou em host estático
 
-    location / {
-        proxy_pass http://127.0.0.1:5090;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-```
-
-O servidor confia no `X-Forwarded-For` só quando vem do próprio servidor (127.0.0.1), então o limite por IP funciona
-atrás do nginx sem deixar o cliente forjar o IP.
-
-### IIS / Azure App Service
-
-Instale o *ASP.NET Core Hosting Bundle* (.NET 10) e envie `artifacts/web` inteira (o publish gera o `web.config`).
-Dê permissão de escrita em `App_Data` ao pool. A chave de moderação vai em variável de ambiente
-(`Leaderboard__AdminKey`) ou em `appsettings.Production.json` (não versionar).
-
-### Jogo e API em lugares diferentes
-
-Jogo estático (Apache, Cloudflare Pages...) + `SnakeVs.Server` em outro domínio: gere o jogo com
-`-StaticOnly -ApiUrl https://api.exemplo.com/` e no servidor libere a origem do jogo:
-`Leaderboard__AllowedOrigins__0=https://jogo.exemplo.com`.
-
-## Hospedagem só do jogo (sem ranking)
-
-`./scripts/build-web.ps1 -StaticOnly` e envie **o conteúdo** de `artifacts/web/wwwroot`.
-
-- Apache / LiteSpeed (cPanel, Hostinger etc.): o `.htaccess` incluído cuida de tipos, `.br`/`.gz` e cache. Envie
-  também o `.htaccess` (arquivo oculto). Precisa de `mod_rewrite`, `mod_headers` e `AllowOverride All`.
-- Cloudflare Pages, Netlify, GitHub Pages, Azure Static Web Apps: já servem `.wasm` certo e comprimem sozinhos.
-- nginx: sirva a pasta com `gzip_static on;` (e `brotli_static on;` se tiver o ngx_brotli), `application/wasm` para
-  `.wasm`, `Cache-Control: no-cache` no geral e `max-age=31536000, immutable` para `_framework/*.<hash>.*`.
-
-O `index.html` usa `<base href="./" />`: funciona na raiz ou numa subpasta (acesse com a barra final).
+`./scripts/build-web.ps1 -NoRanking` e envie o conteúdo de `artifacts/web/wwwroot` para qualquer host estático
+(Apache/LiteSpeed com o `.htaccess` incluído, Cloudflare Pages, Netlify, GitHub Pages). O `index.html` usa
+`<base href="./" />`: funciona na raiz ou numa subpasta (acesse com a barra final).
 
 ## Checklist de deploy
 
-- [ ] `./scripts/build-web.ps1` sem erros (roda os testes do Core e do servidor).
-- [ ] `Leaderboard:AdminKey` definido no servidor (fora do repositório) e `App_Data` com permissão de escrita.
+- [ ] `./scripts/build-web.ps1` sem erros e workflow **ranking-api** verde.
+- [ ] `curl http://127.0.0.1:5090/api/health` na VM responde `ok`; `/etc/snakevs-api.env` com a chave de moderação.
 - [ ] Abrir o site no celular e no PC: menu, toque/clique, teclado e som após o primeiro toque.
 - [ ] Jogar uma partida, salvar no ranking com um apelido e ver a posição no Ranking.
-- [ ] DevTools > Network: `dotnet.native.*.wasm` com `content-encoding: br` e `content-type: application/wasm`.
+- [ ] DevTools > Network: `dotnet.native.*.wasm` com `content-encoding: gzip` (ou `br`) e `content-type: application/wasm`.
 - [ ] Backup periódico do `scores.db`.
-- [ ] **Política de privacidade**: com o ranking, o site passa a guardar no servidor o apelido digitado, a pontuação e
-      a data (o IP só é usado em memória para o limite de envios, não é gravado). O texto atual diz que nada é
-      armazenado em servidores; precisa ser atualizado antes de publicar a versão web com ranking.
+- [ ] **Política de privacidade**: com o ranking, o site guarda no servidor o apelido digitado, a pontuação e a data
+      (o IP só é usado em memória para o limite de envios, não é gravado). O texto atual diz que nada é armazenado em
+      servidores; precisa ser atualizado antes de publicar a versão web com ranking.

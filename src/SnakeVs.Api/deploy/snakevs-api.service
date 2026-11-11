@@ -1,0 +1,44 @@
+# Snake VS ranking API as a systemd service.
+#   sudo install -m 755 snakevs-api /usr/local/bin/
+#   sudo cp snakevs-api.service /etc/systemd/system/
+#   echo 'SNAKEVS_ADMIN_KEY=<long random key>' | sudo tee /etc/snakevs-api.env && sudo chmod 600 /etc/snakevs-api.env
+#   sudo systemctl daemon-reload && sudo systemctl enable --now snakevs-api
+# Database: /var/lib/snakevs/scores.db (created on first start).
+
+[Unit]
+Description=Snake VS ranking API
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/snakevs-api
+Environment=SNAKEVS_LISTEN=127.0.0.1:5090
+Environment=SNAKEVS_DB=/var/lib/snakevs/scores.db
+EnvironmentFile=-/etc/snakevs-api.env
+Restart=on-failure
+RestartSec=2
+
+# Own throw-away user and a private writable /var/lib/snakevs; nothing else on the disk is writable.
+DynamicUser=yes
+StateDirectory=snakevs
+
+# Good neighbour on a small VM: lower CPU priority and hard caps (it normally uses a few MB).
+Nice=10
+MemoryMax=32M
+TasksMax=16
+
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

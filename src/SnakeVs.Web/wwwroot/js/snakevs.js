@@ -261,7 +261,11 @@
         // Ranking API base URL: meta "snakevs-api" (empty = this site, "off" = no online ranking).
         apiBase() {
             const meta = document.querySelector('meta[name="snakevs-api"]');
-            const value = meta ? meta.content.trim() : '';
+            let value = meta ? meta.content.trim() : '';
+            // Local development only: http://localhost:5080/?api=http://localhost:5090/
+            if (['localhost', '127.0.0.1'].includes(location.hostname)) {
+                value = new URLSearchParams(location.search).get('api') || value;
+            }
             if (value.toLowerCase() === 'off') return null;
             const url = new URL(value || '.', document.baseURI).href;
             return url.endsWith('/') ? url : url + '/';
