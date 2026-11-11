@@ -1,0 +1,12 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime Js
+
+@code {
+    // No markup: the game draws on the #theCanvas element of index.html. This component only starts the loop.
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+        var js = (IJSInProcessRuntime)Js;
+        js.InvokeVoid("snakevs.start", DotNetObjectReference.Create(new WebPlatform(js)));
+    }
+}

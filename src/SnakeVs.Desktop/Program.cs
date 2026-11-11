@@ -1,5 +1,6 @@
 using SnakeVs.Game;
 using SnakeVs.Game.Platform;
+using SnakeVs.Game.Storage;
 
 namespace SnakeVs.Desktop;
 
@@ -41,7 +42,11 @@ internal sealed class DesktopPlatform(string dataDirectory) : IPlatformServices
 
     public bool IsMobile => false;
 
-    public string DataDirectory => dataDirectory;
+    public bool HasMouse => true;
+
+    public float PointerScale => 1f;
+
+    public ISaveStorage Storage { get; } = new FileSaveStorage(dataDirectory);
 
     public SafeInsets GetSafeInsets() => SafeInsets.None;
 

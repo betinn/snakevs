@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Snake VS</title>
+    <meta name="description" content="Snake clássico, níveis com obstáculos e poderes, e duelo contra a CPU. Jogue direto no navegador." />
+    <meta name="theme-color" content="#0D1021" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Snake VS" />
+    <meta property="og:title" content="Snake VS" />
+    <meta property="og:description" content="Snake clássico, níveis com obstáculos e poderes, e duelo contra a CPU." />
+    <meta property="og:type" content="website" />
+    <base href="./" />
+    <link rel="icon" href="favicon.ico" sizes="any" />
+    <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <style>
+        /* Colors follow docs/STYLE.md (Palette.cs). */
+        html, body {
+            margin: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #0D1021;
+            color: #F2F4FF;
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            overscroll-behavior: none;
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+        }
+
+        #theCanvas {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            width: 100dvw;
+            height: 100dvh;
+            display: block;
+            outline: none;
+            touch-action: none;
+        }
+
+        /* Read by snakevs.js to learn the notch / rounded corner insets. */
+        .safe-probe {
+            position: fixed;
+            visibility: hidden;
+            pointer-events: none;
+            padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+        }
+
+        #loading {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 28px;
+            background: #0D1021;
+            z-index: 10;
+        }
+
+        #loading .logo {
+            font: 800 clamp(36px, 11vw, 72px)/1 ui-monospace, "Courier New", monospace;
+            letter-spacing: 0.08em;
+            color: #6CF08A;
+            text-shadow: 0 4px 0 #05060F;
+        }
+
+        #loading .logo span {
+            display: inline-block;
+            padding: 0.08em 0.25em;
+            border-radius: 0.2em;
+            background: #FF6B8A;
+            color: #0D1021;
+            text-shadow: none;
+        }
+
+        #loading .bar {
+            width: min(260px, 60vw);
+            height: 10px;
+            border-radius: 5px;
+            background: #2A3260;
+            overflow: hidden;
+        }
+
+        #loading .fill {
+            width: var(--blazor-load-percentage, 0%);
+            height: 100%;
+            border-radius: 5px;
+            background: #6CF08A;
+            transition: width 0.15s ease-out;
+        }
+
+        .fatal {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            padding: 24px;
+            text-align: center;
+            background: #0D1021;
+            z-index: 20;
+        }
+
+        #blazor-error-ui {
+            display: none;
+        }
+
+        #blazor-error-ui .reload {
+            padding: 14px 28px;
+            border-radius: 12px;
+            background: #2ECC71;
+            color: #0B2615;
+            font-weight: 700;
+            text-decoration: none;
+        }
+    </style>
+    <link rel="preload" id="webassembly" />
+    <script type="importmap"></script>
+</head>
+<body>
+    <canvas id="theCanvas" tabindex="0" aria-label="Snake VS"></canvas>
+
+    <div id="loading" aria-live="polite">
+        <div class="logo">SNAKE <span>VS</span></div>
+        <div class="bar"><div class="fill"></div></div>
+    </div>
+
+    <noscript>
+        <div class="fatal">Ative o JavaScript para jogar. / Enable JavaScript to play.</div>
+    </noscript>
+
+    <div id="blazor-error-ui" class="fatal">
+        <p>Algo deu errado. / Something went wrong.</p>
+        <a href="" class="reload">Recarregar / Reload</a>
+    </div>
+
+    <app id="app"></app>
+
+    <!-- snakevs.js must come first: it hooks AudioContext before the engine creates one. -->
+    <script src="js/snakevs#[.{fingerprint}].js"></script>
+    <script src="_content/nkast.Wasm.JSInterop/js/JSObject.10.0.3#[.{fingerprint}].js"></script>
+    <script src="_content/nkast.Wasm.Dom/js/Window.10.0.3#[.{fingerprint}].js"></script>
+    <script src="_content/nkast.Wasm.Dom/js/Document.10.0.3#[.{fingerprint}].js"></script>
+    <script src="_content/nkast.Wasm.Dom/js/Navigator.10.0.3#[.{fingerprint}].js"></script>
+    <script src="_content/nkast.Wasm.Dom/js/Gamepad.10.0.3#[.{fingerprint}].js"></script>
+    <script src="_content/nkast.Wasm.Dom/js/Media.10.0.3#[.{fingerprint}].js"></script>
+    <script src="_content/nkast.Wasm.XHR/js/XHR.10.0.3#[.{fingerprint}].js"></script>
+    <script src="_content/nkast.Wasm.Canvas/js/Canvas.10.0.3#[.{fingerprint}].js"></script>
+    <script src="_content/nkast.Wasm.Canvas/js/CanvasGLContext.10.0.3#[.{fingerprint}].js"></script>
+    <script src="_content/nkast.Wasm.Audio/js/Audio.10.0.3#[.{fingerprint}].js"></script>
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+</body>
+</html>

@@ -60,9 +60,11 @@ public sealed class SnakeGame : Microsoft.Xna.Framework.Game
         IsMouseVisible = !platform.IsMobile;
         IsFixedTimeStep = false;
 
-        Store = new SaveStore(platform.DataDirectory);
+        Store = new SaveStore(platform.Storage);
         Save = Store.Load();
-        Text = Strings.ForCulture(CultureInfo.CurrentUICulture);
+        Text = _options.Language is { } language
+            ? Strings.ForLanguage(language)
+            : Strings.ForCulture(CultureInfo.CurrentUICulture);
     }
 
     public IPlatformServices Platform { get; }
@@ -116,8 +118,7 @@ public sealed class SnakeGame : Microsoft.Xna.Framework.Game
     public void Quit()
     {
         Persist();
-        if (Platform.IsMobile) Platform.ExitApp();
-        else Exit();
+        Platform.ExitApp();
     }
 
     protected override void Initialize()
@@ -144,11 +145,31 @@ public sealed class SnakeGame : Microsoft.Xna.Framework.Game
         if (_options.TourDirectory is { } tourDir) _tour = new AutoTour(this, tourDir);
     }
 
+    /// <summary>App went to the background or lost focus: pause and save.</summary>
+    public void Suspend()
+    {
+        _scene?.OnFocusLost();
+        Persist();
+    }
+
+    // MonoGame and KNI (web build) differ only in the signature of these two callbacks.
+#if KNI
+    protected override void OnDeactivated(EventArgs args)
+    {
+        base.OnDeactivated(args);
+        Suspend();
+    }
+
+    protected override void OnExiting(EventArgs args)
+    {
+        Persist();
+        base.OnExiting(args);
+    }
+#else
     protected override void OnDeactivated(object sender, EventArgs args)
     {
         base.OnDeactivated(sender, args);
-        _scene?.OnFocusLost();
-        Persist();
+        Suspend();
     }
 
     protected override void OnExiting(object sender, ExitingEventArgs args)
@@ -156,6 +177,7 @@ public sealed class SnakeGame : Microsoft.Xna.Framework.Game
         Persist();
         base.OnExiting(sender, args);
     }
+#endif
 
     protected override void Update(GameTime gameTime)
     {
@@ -163,7 +185,7 @@ public sealed class SnakeGame : Microsoft.Xna.Framework.Game
         Time += dt;
         UpdateMetrics(force: false);
 
-        Input.Update(gameTime.TotalGameTime.TotalSeconds, Scale, Platform.ConsumeBackRequest(), !Platform.IsMobile);
+        Input.Update(gameTime.TotalGameTime.TotalSeconds, Scale / Platform.PointerScale, Platform.ConsumeBackRequest(), Platform.HasMouse);
 
         if (_fadingOut)
         {

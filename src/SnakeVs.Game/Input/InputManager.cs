@@ -5,6 +5,13 @@ using SnakeVs.Core;
 
 namespace SnakeVs.Game.Input;
 
+public enum PointerPhase
+{
+    Down,
+    Move,
+    Up,
+}
+
 /// <summary>
 /// Unifies touch, mouse, keyboard and gamepad into simple per-frame signals in virtual coordinates:
 /// taps, swipes (emitted while the finger is still moving, for responsive steering), presses and keys.
@@ -19,6 +26,7 @@ public sealed class InputManager
     private readonly List<Vector2> _taps = [];
     private readonly List<Vector2> _presses = [];
     private readonly List<Direction> _swipes = [];
+    private readonly List<(PointerPhase Phase, int Id, Vector2 Position)> _queued = [];
 
     private KeyboardState _prevKeys;
     private GamePadState _prevPad;
@@ -96,6 +104,25 @@ public sealed class InputManager
             }
         }
 
+        foreach (var (phase, id, raw) in _queued)
+        {
+            var pos = raw / scale;
+            switch (phase)
+            {
+                case PointerPhase.Down:
+                    PointerDown(id, pos, totalSeconds);
+                    break;
+                case PointerPhase.Move:
+                    PointerMove(id, pos);
+                    break;
+                default:
+                    PointerUp(id, pos, totalSeconds);
+                    break;
+            }
+        }
+
+        _queued.Clear();
+
         if (mouseEnabled)
         {
             var mouse = Mouse.GetState();
@@ -108,6 +135,12 @@ public sealed class InputManager
             _prevMouse = mouse;
         }
     }
+
+    /// <summary>
+    /// Adds a pointer event captured by the platform between frames, in raw pointer units (same as touch positions).
+    /// Used where polling would miss a press and release inside one frame (web mouse). Applied on the next update.
+    /// </summary>
+    public void QueuePointer(PointerPhase phase, int id, Vector2 position) => _queued.Add((phase, id, position));
 
     /// <summary>Clears all signals so the next scene does not react to the input that opened it.</summary>
     public void Consume()

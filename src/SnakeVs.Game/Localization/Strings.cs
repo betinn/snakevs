@@ -68,8 +68,13 @@ public sealed class Strings
 
     public string PowerUpName(PowerUpKind kind) => PowerUpNames[(int)kind];
 
-    public static Strings ForCulture(CultureInfo culture) =>
-        culture.TwoLetterISOLanguageName.Equals("pt", StringComparison.OrdinalIgnoreCase) ? Portuguese : English;
+    public static Strings ForCulture(CultureInfo culture) => ForLanguage(culture.TwoLetterISOLanguageName);
+
+    /// <summary>Picks the strings for a language tag such as "pt", "pt-BR" or "en-US".</summary>
+    public static Strings ForLanguage(string tag) =>
+        tag.Equals("pt", StringComparison.OrdinalIgnoreCase) || tag.StartsWith("pt-", StringComparison.OrdinalIgnoreCase)
+            ? Portuguese
+            : English;
 
     public static readonly Strings Portuguese = new()
     {

@@ -1,3 +1,5 @@
+using SnakeVs.Game.Storage;
+
 namespace SnakeVs.Game.Platform;
 
 /// <summary>Screen area hidden by notches, rounded corners or system bars, in back buffer pixels.</summary>
@@ -11,8 +13,14 @@ public interface IPlatformServices
 {
     bool IsMobile { get; }
 
-    /// <summary>Folder where the save file lives. Must be writable and private to the app.</summary>
-    string DataDirectory { get; }
+    /// <summary>True when the mouse state should be polled every frame (desktop). Android only uses touch; the web queues mouse events itself.</summary>
+    bool HasMouse { get; }
+
+    /// <summary>Back buffer pixels per touch/mouse coordinate unit. 1 everywhere except the web (device pixel ratio).</summary>
+    float PointerScale { get; }
+
+    /// <summary>Where records and settings are kept (private app folder, browser storage...).</summary>
+    ISaveStorage Storage { get; }
 
     SafeInsets GetSafeInsets();
 
@@ -21,7 +29,7 @@ public interface IPlatformServices
     /// <summary>Returns true once for every system back gesture/button since the last call.</summary>
     bool ConsumeBackRequest();
 
-    /// <summary>Leaves the game (Android: sends the task to the background).</summary>
+    /// <summary>Leaves the game (Android: sends the task to the background; desktop: closes; web: leaves the page).</summary>
     void ExitApp();
 }
 
@@ -33,4 +41,7 @@ public sealed class GameOptions
 
     /// <summary>When set, renders store art (icons and feature graphic) here, then exits.</summary>
     public string? StoreArtDirectory { get; init; }
+
+    /// <summary>UI language tag (e.g. "pt-BR"). When null, the current UI culture decides.</summary>
+    public string? Language { get; init; }
 }

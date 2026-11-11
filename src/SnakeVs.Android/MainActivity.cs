@@ -7,6 +7,7 @@ using Android.Window;
 using Microsoft.Xna.Framework;
 using SnakeVs.Game;
 using SnakeVs.Game.Platform;
+using SnakeVs.Game.Storage;
 
 namespace SnakeVs.Droid;
 
@@ -26,6 +27,7 @@ namespace SnakeVs.Droid;
 public class MainActivity : AndroidGameActivity, IPlatformServices
 {
     private SnakeGame? _game;
+    private FileSaveStorage? _storage;
     private View? _view;
     private BackCallback? _backCallback;
     private volatile bool _backRequested;
@@ -36,7 +38,12 @@ public class MainActivity : AndroidGameActivity, IPlatformServices
 
     public bool IsMobile => true;
 
-    public string DataDirectory => FilesDir?.AbsolutePath ?? System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData);
+    public bool HasMouse => false;
+
+    public float PointerScale => 1f;
+
+    public ISaveStorage Storage => _storage ??= new FileSaveStorage(
+        FilesDir?.AbsolutePath ?? System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData));
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {

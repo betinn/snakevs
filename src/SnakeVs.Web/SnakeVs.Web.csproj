@@ -1,0 +1,48 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <!--
+    Web build (Blazor WebAssembly + WebGL through KNI, an XNA/MonoGame compatible framework that runs in the browser).
+    "dotnet publish -c Release" produces a static site in bin/Release/net10.0/publish/wwwroot.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>SnakeVs.Web</RootNamespace>
+    <AssemblyName>SnakeVs.Web</AssemblyName>
+    <DefineConstants>$(DefineConstants);BLAZORGL;KNI</DefineConstants>
+    <KniPlatform>BlazorGL</KniPlatform>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Smaller download: the game needs neither time zones nor culture data (language comes from the browser). -->
+    <BlazorEnableTimeZoneSupport>false</BlazorEnableTimeZoneSupport>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- Fingerprinted file names in index.html, so a new deploy never mixes with cached old files. -->
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="nkast.Xna.Framework" Version="4.3.9001" />
+    <PackageReference Include="nkast.Xna.Framework.Graphics" Version="4.3.9001" />
+    <PackageReference Include="nkast.Xna.Framework.Audio" Version="4.3.9001" />
+    <PackageReference Include="nkast.Xna.Framework.Input" Version="4.3.9001" />
+    <PackageReference Include="nkast.Xna.Framework.Game" Version="4.3.9001" />
+    <PackageReference Include="nkast.Kni.Platform.Blazor.GL" Version="4.3.9001" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.10" PrivateAssets="all" />
+  </ItemGroup>
+
+  <!-- Own scripts get fingerprinted names too (see #[.{fingerprint}] in index.html); styles are inlined there. -->
+  <ItemGroup>
+    <StaticWebAssetFingerprintPattern Include="SnakeVsJs" Pattern="*.js" Expression="#[.{fingerprint}]!" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SnakeVs.Core\SnakeVs.Core.csproj" />
+  </ItemGroup>
+
+  <!-- Shared game code (rendering, scenes, input) is compiled into every platform head. -->
+  <ItemGroup>
+    <Compile Include="..\SnakeVs.Game\**\*.cs" Link="Game\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
