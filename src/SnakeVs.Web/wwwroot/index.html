@@ -14,6 +14,8 @@
     <meta property="og:title" content="Snake VS" />
     <meta property="og:description" content="Snake clássico, níveis com obstáculos e poderes, e duelo contra a CPU." />
     <meta property="og:type" content="website" />
+    <!-- Online ranking API: empty = same site (SnakeVs.Server), a URL = API hosted elsewhere, "off" = no ranking. -->
+    <meta name="snakevs-api" content="" />
     <base href="./" />
     <link rel="icon" href="favicon.ico" sizes="any" />
     <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192" />
@@ -100,6 +102,82 @@
             transition: width 0.15s ease-out;
         }
 
+        .dialog {
+            position: fixed;
+            inset: 0;
+            z-index: 15;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            padding: 24px;
+            background: rgba(7, 9, 22, 0.78);
+            font-family: ui-monospace, "Courier New", monospace;
+        }
+
+        .dialog[hidden] {
+            display: none;
+        }
+
+        .dialog label {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #8C93B8;
+        }
+
+        .dialog input {
+            width: min(360px, 86vw);
+            box-sizing: border-box;
+            padding: 14px 16px;
+            border: 3px solid #323B70;
+            border-radius: 14px;
+            background: #1A2042;
+            color: #F2F4FF;
+            font: 700 28px/1.2 ui-monospace, "Courier New", monospace;
+            letter-spacing: 0.08em;
+            text-align: center;
+            text-transform: uppercase;
+            outline: none;
+            -webkit-user-select: text;
+            user-select: text;
+        }
+
+        .dialog input:focus {
+            border-color: #6CF08A;
+        }
+
+        .dialog .actions {
+            display: flex;
+            gap: 14px;
+            width: min(360px, 86vw);
+        }
+
+        .dialog button {
+            flex: 1;
+            padding: 14px 10px;
+            border: 0;
+            border-radius: 14px;
+            background: #2ECC71;
+            color: #0B2615;
+            font: 700 18px/1.2 ui-monospace, "Courier New", monospace;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+
+        .dialog button.secondary {
+            background: #232B57;
+            color: #F2F4FF;
+        }
+
+        .dialog button:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+
         .fatal {
             position: fixed;
             inset: 0;
@@ -127,11 +205,18 @@
             text-decoration: none;
         }
     </style>
-    <link rel="preload" id="webassembly" />
-    <script type="importmap"></script>
 </head>
 <body>
     <canvas id="theCanvas" tabindex="0" aria-label="Snake VS"></canvas>
+
+    <form id="name-dialog" class="dialog" hidden autocomplete="off">
+        <label id="name-label" for="name-input"></label>
+        <input id="name-input" type="text" autocomplete="nickname" autocapitalize="characters" spellcheck="false" enterkeyhint="done" />
+        <div class="actions">
+            <button type="button" id="name-cancel" class="secondary"></button>
+            <button type="submit" id="name-save"></button>
+        </div>
+    </form>
 
     <div id="loading" aria-live="polite">
         <div class="logo">SNAKE <span>VS</span></div>
@@ -150,17 +235,17 @@
     <app id="app"></app>
 
     <!-- snakevs.js must come first: it hooks AudioContext before the engine creates one. -->
-    <script src="js/snakevs#[.{fingerprint}].js"></script>
-    <script src="_content/nkast.Wasm.JSInterop/js/JSObject.10.0.3#[.{fingerprint}].js"></script>
-    <script src="_content/nkast.Wasm.Dom/js/Window.10.0.3#[.{fingerprint}].js"></script>
-    <script src="_content/nkast.Wasm.Dom/js/Document.10.0.3#[.{fingerprint}].js"></script>
-    <script src="_content/nkast.Wasm.Dom/js/Navigator.10.0.3#[.{fingerprint}].js"></script>
-    <script src="_content/nkast.Wasm.Dom/js/Gamepad.10.0.3#[.{fingerprint}].js"></script>
-    <script src="_content/nkast.Wasm.Dom/js/Media.10.0.3#[.{fingerprint}].js"></script>
-    <script src="_content/nkast.Wasm.XHR/js/XHR.10.0.3#[.{fingerprint}].js"></script>
-    <script src="_content/nkast.Wasm.Canvas/js/Canvas.10.0.3#[.{fingerprint}].js"></script>
-    <script src="_content/nkast.Wasm.Canvas/js/CanvasGLContext.10.0.3#[.{fingerprint}].js"></script>
-    <script src="_content/nkast.Wasm.Audio/js/Audio.10.0.3#[.{fingerprint}].js"></script>
-    <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
+    <script src="js/snakevs.js"></script>
+    <script src="_content/nkast.Wasm.JSInterop/js/JSObject.10.0.3.js"></script>
+    <script src="_content/nkast.Wasm.Dom/js/Window.10.0.3.js"></script>
+    <script src="_content/nkast.Wasm.Dom/js/Document.10.0.3.js"></script>
+    <script src="_content/nkast.Wasm.Dom/js/Navigator.10.0.3.js"></script>
+    <script src="_content/nkast.Wasm.Dom/js/Gamepad.10.0.3.js"></script>
+    <script src="_content/nkast.Wasm.Dom/js/Media.10.0.3.js"></script>
+    <script src="_content/nkast.Wasm.XHR/js/XHR.10.0.3.js"></script>
+    <script src="_content/nkast.Wasm.Canvas/js/Canvas.10.0.3.js"></script>
+    <script src="_content/nkast.Wasm.Canvas/js/CanvasGLContext.10.0.3.js"></script>
+    <script src="_content/nkast.Wasm.Audio/js/Audio.10.0.3.js"></script>
+    <script src="_framework/blazor.webassembly.js"></script>
 </body>
 </html>

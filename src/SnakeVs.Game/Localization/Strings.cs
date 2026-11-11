@@ -50,6 +50,19 @@ public sealed class Strings
     public required string Tagline { get; init; }
     public required string Apples { get; init; }
     public required string ShieldSaved { get; init; }
+    public required string Ranking { get; init; }
+    public required string SaveScore { get; init; }
+    public required string Sending { get; init; }
+    public required string SaveFailed { get; init; }
+    public required string Loading { get; init; }
+    public required string RankingEmpty { get; init; }
+    public required string RankingOffline { get; init; }
+    public required string Retry { get; init; }
+
+    /// <summary>Name dialog (drawn by the platform, not the pixel font: mixed case allowed).</summary>
+    public required string NamePrompt { get; init; }
+    public required string NameSave { get; init; }
+    public required string NameCancel { get; init; }
     public required string[] HelpBasics { get; init; }
     public required string[] HelpModes { get; init; }
     public required string[] PowerUpNames { get; init; }
@@ -122,6 +135,17 @@ public sealed class Strings
         Tagline = "CLÁSSICO, NÍVEIS E PODERES",
         Apples = "MAÇÃS",
         ShieldSaved = "ESCUDO!",
+        Ranking = "RANKING",
+        SaveScore = "SALVAR NO RANKING",
+        Sending = "ENVIANDO...",
+        SaveFailed = "ERRO. TENTAR DE NOVO",
+        Loading = "CARREGANDO...",
+        RankingEmpty = "NINGUÉM AINDA. SEJA O PRIMEIRO!",
+        RankingOffline = "RANKING INDISPONÍVEL",
+        Retry = "TENTAR DE NOVO",
+        NamePrompt = "Seu nome ou apelido",
+        NameSave = "Salvar",
+        NameCancel = "Cancelar",
         HelpBasics =
         [
             "DESLIZE O DEDO PARA VIRAR.",
@@ -198,6 +222,17 @@ public sealed class Strings
         Tagline = "CLASSIC, LEVELS AND POWER-UPS",
         Apples = "APPLES",
         ShieldSaved = "SHIELD!",
+        Ranking = "RANKING",
+        SaveScore = "SAVE TO RANKING",
+        Sending = "SENDING...",
+        SaveFailed = "ERROR. TRY AGAIN",
+        Loading = "LOADING...",
+        RankingEmpty = "NO SCORES YET. BE THE FIRST!",
+        RankingOffline = "RANKING UNAVAILABLE",
+        Retry = "TRY AGAIN",
+        NamePrompt = "Your name or nickname",
+        NameSave = "Save",
+        NameCancel = "Cancel",
         HelpBasics =
         [
             "SWIPE TO TURN.",

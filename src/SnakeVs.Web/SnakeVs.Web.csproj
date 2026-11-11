@@ -16,8 +16,6 @@
     <!-- Smaller download: the game needs neither time zones nor culture data (language comes from the browser). -->
     <BlazorEnableTimeZoneSupport>false</BlazorEnableTimeZoneSupport>
     <InvariantGlobalization>true</InvariantGlobalization>
-    <!-- Fingerprinted file names in index.html, so a new deploy never mixes with cached old files. -->
-    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,13 +25,8 @@
     <PackageReference Include="nkast.Xna.Framework.Input" Version="4.3.9001" />
     <PackageReference Include="nkast.Xna.Framework.Game" Version="4.3.9001" />
     <PackageReference Include="nkast.Kni.Platform.Blazor.GL" Version="4.3.9001" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.10" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.10" PrivateAssets="all" />
-  </ItemGroup>
-
-  <!-- Own scripts get fingerprinted names too (see #[.{fingerprint}] in index.html); styles are inlined there. -->
-  <ItemGroup>
-    <StaticWebAssetFingerprintPattern Include="SnakeVsJs" Pattern="*.js" Expression="#[.{fingerprint}]!" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.15" PrivateAssets="all" />
   </ItemGroup>
 
   <ItemGroup>

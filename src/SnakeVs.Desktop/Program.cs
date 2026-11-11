@@ -1,4 +1,5 @@
 using SnakeVs.Game;
+using SnakeVs.Game.Online;
 using SnakeVs.Game.Platform;
 using SnakeVs.Game.Storage;
 
@@ -47,6 +48,8 @@ internal sealed class DesktopPlatform(string dataDirectory) : IPlatformServices
     public float PointerScale => 1f;
 
     public ISaveStorage Storage { get; } = new FileSaveStorage(dataDirectory);
+
+    public ILeaderboard? Leaderboard => null;
 
     public SafeInsets GetSafeInsets() => SafeInsets.None;
 

@@ -6,6 +6,7 @@ using Android.Views;
 using Android.Window;
 using Microsoft.Xna.Framework;
 using SnakeVs.Game;
+using SnakeVs.Game.Online;
 using SnakeVs.Game.Platform;
 using SnakeVs.Game.Storage;
 
@@ -44,6 +45,8 @@ public class MainActivity : AndroidGameActivity, IPlatformServices
 
     public ISaveStorage Storage => _storage ??= new FileSaveStorage(
         FilesDir?.AbsolutePath ?? System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData));
+
+    public ILeaderboard? Leaderboard => null;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {

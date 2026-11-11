@@ -2,6 +2,7 @@ using Microsoft.Xna.Framework;
 using SnakeVs.Core;
 using SnakeVs.Game.Audio;
 using SnakeVs.Game.Graphics;
+using SnakeVs.Game.Online;
 using SnakeVs.Game.UI;
 
 namespace SnakeVs.Game.Scenes;
@@ -26,6 +27,7 @@ public sealed class PlayScene : Scene
     private readonly Button _pauseToMenu;
     private readonly Button _again;
     private readonly Button _resultToMenu;
+    private readonly Button _saveScore;
     private readonly RectF[] _pad = new RectF[4];
 
     private Phase _phase = Phase.Ready;
@@ -39,6 +41,11 @@ public sealed class PlayScene : Scene
     private int _bestBefore;
     private int _eatCombo;
     private float _comboTimer;
+
+    // Online ranking: name dialog, then the upload. The name is kept so a failed upload retries without asking again.
+    private Task<string?>? _askName;
+    private Task<SubmitResult>? _submit;
+    private string? _submitName;
 
     public PlayScene(SnakeGame game, GameMode mode, bool autopilot = false, int startLevel = 1) : base(game)
     {
@@ -60,6 +67,7 @@ public sealed class PlayScene : Scene
         _pauseToMenu = _pauseMenu.Add(new Button(t.Menu));
         _again = _resultMenu.Add(new Button(mode == GameMode.Versus ? t.Rematch : t.PlayAgain, ButtonStyle.Primary));
         _resultToMenu = _resultMenu.Add(new Button(t.Menu));
+        _saveScore = new Button(t.SaveScore) { Accent = Palette.Gold };
     }
 
     private enum Phase
@@ -75,6 +83,8 @@ public sealed class PlayScene : Scene
     public GameSession Session => _session;
 
     private bool UseButtons => Game.Save.Controls == ControlScheme.Buttons && !_autopilot;
+
+    private ILeaderboard? OnlineRanking => _autopilot ? null : Game.Platform.Leaderboard;
 
     public override void Enter()
     {
@@ -125,11 +135,12 @@ public sealed class PlayScene : Scene
         _pause.Bounds = new RectF(_hud.Right - 84, _hud.Y + 6, 84, 84);
 
         var pw = MathF.Min(600f, Screen.X - 60f);
-        var ph = 640f;
+        var results = _resultMenu.Buttons.Count;
+        var ph = 640f + (results - 2) * 120f;
         _panel = RectF.FromCenter(Safe.Center, pw, ph);
         var bw = pw - 100f;
         _pauseMenu.LayoutColumn(_panel.Center.X, _panel.Y + 200, bw, 96, 24);
-        _resultMenu.LayoutColumn(_panel.Center.X, _panel.Bottom - 96 * 2 - 24 - 50, bw, 96, 24);
+        _resultMenu.LayoutColumn(_panel.Center.X, _panel.Bottom - 96 * results - 24 * (results - 1) - 50, bw, 96, 24);
     }
 
     public override void OnFocusLost()
@@ -231,8 +242,14 @@ public sealed class PlayScene : Scene
                 break;
 
             case Phase.Result:
+                if (UpdateSaveScore()) break;
                 var pick = _resultMenu.Update(input);
-                if (pick == _again)
+                if (pick == _saveScore)
+                {
+                    Game.PlaySound(Sfx.Click);
+                    StartSaveScore();
+                }
+                else if (pick == _again)
                 {
                     Game.PlaySound(Sfx.Click);
                     Game.SetScene(new PlayScene(Game, _mode));
@@ -316,7 +333,92 @@ public sealed class PlayScene : Scene
         }
 
         Game.Persist();
+
+        // Online ranking: offer to save any scoring run of a ranked mode.
+        if (OnlineRanking is not null && Leaderboard.IsRanked(_mode) && _session.Player.Score > 0)
+        {
+            _resultMenu.Clear();
+            _resultMenu.Add(_saveScore);
+            _resultMenu.Add(_again);
+            _resultMenu.Add(_resultToMenu);
+            Layout();
+        }
+
         SetPhase(Phase.Result);
+    }
+
+    private void StartSaveScore()
+    {
+        if (OnlineRanking is not { } ranking || _askName is not null || _submit is not null) return;
+        if (_submitName is not null)
+        {
+            Submit(ranking, _submitName);
+            return;
+        }
+
+        try
+        {
+            _askName = ranking.AskNameAsync(Game.Save.PlayerName, Game.Text);
+        }
+        catch (Exception)
+        {
+            _saveScore.Label = Game.Text.SaveFailed;
+        }
+    }
+
+    private void Submit(ILeaderboard ranking, string name)
+    {
+        var p = _session.Player;
+        _saveScore.Label = Game.Text.Sending;
+        try
+        {
+            _submit = ranking.SubmitAsync(new ScoreSubmission(_mode, _session.Difficulty, name, p.Score, p.ApplesEaten, _session.Level, _session.StepCount));
+        }
+        catch (Exception)
+        {
+            _saveScore.Label = Game.Text.SaveFailed;
+        }
+    }
+
+    /// <summary>Follows the name dialog and the upload. Returns true while the name dialog is open (input belongs to it).</summary>
+    private bool UpdateSaveScore()
+    {
+        if (OnlineRanking is not { } ranking) return false;
+
+        if (_askName is { } ask)
+        {
+            if (!ask.IsCompleted) return true;
+            _askName = null;
+            Game.Input.Consume();
+            var name = ask.IsCompletedSuccessfully ? Leaderboard.NormalizeName(ask.Result) : null;
+            if (name is null) return false;
+
+            Game.Save.PlayerName = name;
+            Game.Persist();
+            _submitName = name;
+            Submit(ranking, name);
+            return false;
+        }
+
+        if (_submit is { IsCompleted: true } submit)
+        {
+            _submit = null;
+            if (submit.IsCompletedSuccessfully)
+            {
+                var r = submit.Result;
+                var p = _session.Player;
+                var mine = new ScoreEntry(r.Id, r.Rank, _submitName!, p.Score, p.ApplesEaten, _session.Level, DateTime.UtcNow);
+                Game.PlaySound(Sfx.LevelUp);
+                Game.SetScene(new RankingScene(Game, ranking, _mode, _session.Difficulty, mine, replayMode: _mode));
+            }
+            else
+            {
+                _ = submit.Exception; // observed: shown to the player as a retry button
+                _saveScore.Label = Game.Text.SaveFailed;
+            }
+        }
+
+        return false;
     }
 
     private void SetPhase(Phase phase)

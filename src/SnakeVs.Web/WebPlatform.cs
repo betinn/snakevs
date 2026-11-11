@@ -6,6 +6,7 @@ using Microsoft.Xna.Platform.Graphics;
 using Microsoft.Xna.Platform.Input;
 using SnakeVs.Game;
 using SnakeVs.Game.Input;
+using SnakeVs.Game.Online;
 using SnakeVs.Game.Platform;
 using SnakeVs.Game.Storage;
 
@@ -17,10 +18,14 @@ namespace SnakeVs.Web;
 /// </summary>
 public sealed class WebPlatform(IJSInProcessRuntime js) : IPlatformServices
 {
+    /// <summary>Base address of the ranking API (meta "snakevs-api" in index.html), or null when it is turned off.</summary>
+    private readonly string? _apiBase = js.Invoke<string?>("snakevs.apiBase");
+
     private SnakeGame? _game;
     private GraphicsDeviceManager? _graphics;
     private SafeInsets _insets = SafeInsets.None;
     private bool _back;
+    private HttpLeaderboard? _leaderboard;
 
     /// <summary>Only drives window setup in the shared code; the page is always a full window canvas.</summary>
     public bool IsMobile => false;
@@ -34,6 +39,10 @@ public sealed class WebPlatform(IJSInProcessRuntime js) : IPlatformServices
     public float PointerScale { get; private set; } = 1f;
 
     public ISaveStorage Storage { get; } = new LocalStorage(js);
+
+    public ILeaderboard? Leaderboard => _leaderboard ??= _apiBase is null
+        ? null
+        : new HttpLeaderboard(new HttpClient { BaseAddress = new Uri(_apiBase) }, js);
 
     [JSInvokable]
     public void Tick()

@@ -13,6 +13,7 @@ public sealed class MenuScene : Scene
     private readonly Button _classic;
     private readonly Button _levels;
     private readonly Button _versus;
+    private readonly Button? _ranking;
     private readonly Button _options;
     private readonly Button _help;
     private GameSession _attract;
@@ -27,6 +28,7 @@ public sealed class MenuScene : Scene
         _classic = _buttons.Add(new Button(t.Classic, ButtonStyle.Primary));
         _levels = _buttons.Add(new Button(t.Levels));
         _versus = _buttons.Add(new Button(t.Versus) { Accent = Palette.RivalHead });
+        if (game.Platform.Leaderboard is not null) _ranking = _buttons.Add(new Button(t.Ranking) { Accent = Palette.Gold });
         _options = _buttons.Add(new Button(t.Options));
         _help = _buttons.Add(new Button(t.HowToPlay));
         _attract = NewAttract();
@@ -40,7 +42,8 @@ public sealed class MenuScene : Scene
         var width = MathF.Min(560f, safe.W - 80f);
         var height = 92f;
         var gap = 18f;
-        var stack = height * 5 + gap * 4;
+        var count = _buttons.Buttons.Count;
+        var stack = height * count + gap * (count - 1);
         var titleBlock = 330f;
         var footer = 110f;
         var free = safe.H - titleBlock - stack - footer;
@@ -80,6 +83,7 @@ public sealed class MenuScene : Scene
         if (clicked == _classic) Game.SetScene(new PlayScene(Game, GameMode.Endless));
         else if (clicked == _levels) Game.SetScene(new PlayScene(Game, GameMode.Levels));
         else if (clicked == _versus) Game.SetScene(new PlayScene(Game, GameMode.Versus));
+        else if (clicked == _ranking && Game.Platform.Leaderboard is { } board) Game.SetScene(new RankingScene(Game, board, GameMode.Endless, Game.Save.Difficulty));
         else if (clicked == _options) Game.SetScene(new OptionsScene(Game));
         else if (clicked == _help) Game.SetScene(new HelpScene(Game));
     }

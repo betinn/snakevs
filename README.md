@@ -13,6 +13,8 @@ Snake clássico (sem fim), modo por níveis com obstáculos e poderes, feito em 
 - **Controles**: deslizar (padrão) ou botões na tela; teclado/gamepad no desktop e no navegador.
 - **Opções**: dificuldade (Fácil/Normal/Difícil), som, vibração, tipo de controle. Recordes salvos no aparelho.
 - **Idiomas**: Português (Brasil) e Inglês, escolhidos pelo idioma do sistema.
+- **Ranking online (só web)**: ao fim de cada partida do Clássico ou de Níveis, salvar a pontuação com nome/apelido;
+  top 10 por modo e dificuldade, guardado em SQLite no servidor.
 
 ## Estrutura
 
@@ -22,9 +24,11 @@ src/
   SnakeVs.Game/      código MonoGame compartilhado (render, fonte pixel, input, áudio, telas)
   SnakeVs.Android/   app Android (Activity, manifest, ícones, assinatura, AAB)
   SnakeVs.Web/       versão web (Blazor WebAssembly + KNI/WebGL): só o host do navegador, o jogo vem de Core/Game
+  SnakeVs.Server/    site web: serve o jogo e a API do ranking (ASP.NET Core + SQLite)
   SnakeVs.Desktop/   build desktop para desenvolvimento, capturas automáticas e arte da loja
 tests/
-  SnakeVs.Core.Tests/  testes xUnit (regras, colisões, poderes, níveis, IA, save, simulação em massa)
+  SnakeVs.Core.Tests/  testes xUnit (regras, colisões, poderes, níveis, IA, save, simulação em massa, ranking)
+  SnakeVs.Server.Tests/ testes de integração da API do ranking (SQLite temporário)
 store/               textos da loja, política de privacidade, ícone, destaque e capturas de tela
 docs/                padrão visual (STYLE.md), publicação Android (PUBLISHING.md) e web (WEB.md)
 scripts/             chave de upload, build do AAB assinado e build do site
@@ -42,8 +46,8 @@ dotnet run --project src/SnakeVs.Desktop -- --tour shots       # captura todas a
 dotnet run --project src/SnakeVs.Desktop -- --store-art art    # gera ícones Android e gráficos da loja
 ./scripts/create-keystore.ps1                                  # chave de upload (uma vez)
 ./scripts/build-android.ps1                                    # testes + AAB assinado em artifacts/android
-dotnet run --project src/SnakeVs.Web                           # jogar no navegador (http://localhost:5080)
-./scripts/build-web.ps1                                        # testes + site estático em artifacts/web
+dotnet run --project src/SnakeVs.Server                        # jogar no navegador com ranking (http://localhost:5090)
+./scripts/build-web.ps1                                        # testes + site (jogo + ranking) em artifacts/web
 ```
 
 Publicação passo a passo: [docs/PUBLISHING.md](docs/PUBLISHING.md) (Android) e [docs/WEB.md](docs/WEB.md) (web). Padrão visual: [docs/STYLE.md](docs/STYLE.md).

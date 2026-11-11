@@ -16,3 +16,9 @@ TestResults/
 *.keystore
 *.properties
 .snakevs-keys/
+
+# Online ranking database (server)
+App_Data/
+*.db
+*.db-shm
+*.db-wal

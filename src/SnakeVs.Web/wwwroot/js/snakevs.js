@@ -46,9 +46,70 @@
     window.addEventListener('popstate', () => {
         if (!historyArmed) return;
         historyArmed = false;
-        backRequested = true;
         rearmHistory = true;
+        // With the name dialog open, "back" only closes the dialog.
+        if (closeNameDialog) closeNameDialog(null);
+        else backRequested = true;
     });
+
+    // Name dialog for the online ranking (HTML, so phones get their native keyboard). Only one at a time.
+    // Must accept the same characters as Leaderboard.NormalizeName in SnakeVs.Core.
+    const NAME_REJECT = /[^A-Z0-9ÁÀÂÃÉÊÍÓÔÕÚÜÇÑ .\-_]/g;
+    let closeNameDialog = null;
+
+    function askName(initial, label, saveText, cancelText, maxLength) {
+        if (closeNameDialog) closeNameDialog(null);
+        const dialog = document.getElementById('name-dialog');
+        const input = document.getElementById('name-input');
+        const save = document.getElementById('name-save');
+        const cancel = document.getElementById('name-cancel');
+        document.getElementById('name-label').textContent = label;
+        save.textContent = saveText;
+        cancel.textContent = cancelText;
+        input.maxLength = maxLength;
+        input.value = (initial || '').toUpperCase().replace(NAME_REJECT, '').slice(0, maxLength);
+
+        const refresh = () => {
+            const clean = input.value.toUpperCase().replace(NAME_REJECT, '').replace(/^ +/, '').replace(/ {2,}/g, ' ');
+            if (clean !== input.value) input.value = clean;
+            save.disabled = clean.trim().length === 0;
+        };
+
+        return new Promise((resolve) => {
+            const onSubmit = (e) => {
+                e.preventDefault();
+                if (!save.disabled) closeNameDialog(input.value.trim());
+            };
+            const onCancel = () => closeNameDialog(null);
+            const onKey = (e) => {
+                e.stopPropagation(); // typing must not reach the game
+                if (e.key === 'Escape') closeNameDialog(null);
+            };
+
+            closeNameDialog = (value) => {
+                closeNameDialog = null;
+                dialog.hidden = true;
+                dialog.removeEventListener('submit', onSubmit);
+                cancel.removeEventListener('click', onCancel);
+                input.removeEventListener('input', refresh);
+                dialog.removeEventListener('keydown', onKey);
+                dialog.removeEventListener('keyup', onKey);
+                input.blur();
+                canvas.focus();
+                resolve(value);
+            };
+
+            dialog.addEventListener('submit', onSubmit);
+            cancel.addEventListener('click', onCancel);
+            input.addEventListener('input', refresh);
+            dialog.addEventListener('keydown', onKey);
+            dialog.addEventListener('keyup', onKey);
+            refresh();
+            dialog.hidden = false;
+            input.focus();
+            input.select();
+        });
+    }
 
     function onUserGesture() {
         resumeAudio();
@@ -155,6 +216,8 @@
             };
             for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) {
                 canvas.addEventListener(type, swallow, { passive: false });
+                // Taps on the name dialog stay there too (the engine listens on window).
+                document.getElementById('name-dialog').addEventListener(type, (e) => e.stopPropagation());
             }
 
             canvas.addEventListener('contextmenu', block);
@@ -194,6 +257,17 @@
             pointerQueue.length = 0;
             return state;
         },
+
+        // Ranking API base URL: meta "snakevs-api" (empty = this site, "off" = no online ranking).
+        apiBase() {
+            const meta = document.querySelector('meta[name="snakevs-api"]');
+            const value = meta ? meta.content.trim() : '';
+            if (value.toLowerCase() === 'off') return null;
+            const url = new URL(value || '.', document.baseURI).href;
+            return url.endsWith('/') ? url : url + '/';
+        },
+
+        askName,
 
         language() {
             return (navigator.languages && navigator.languages[0]) || navigator.language || 'en';

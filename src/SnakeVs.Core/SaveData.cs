@@ -13,6 +13,7 @@ public enum ControlScheme
 public sealed class SaveData
 {
     private readonly Dictionary<string, int> _best = new(StringComparer.Ordinal);
+    private string? _playerName;
 
     public Difficulty Difficulty { get; set; } = Difficulty.Normal;
     public bool SoundOn { get; set; } = true;
@@ -22,6 +23,13 @@ public sealed class SaveData
     public int VersusLosses { get; set; }
     public int VersusDraws { get; set; }
     public int GamesPlayed { get; set; }
+
+    /// <summary>Last name used in the online ranking, offered again next time. Always normalized (or null).</summary>
+    public string? PlayerName
+    {
+        get => _playerName;
+        set => _playerName = Leaderboard.NormalizeName(value);
+    }
 
     public int GetBest(GameMode mode, Difficulty difficulty) =>
         _best.TryGetValue(Key(mode, difficulty), out var v) ? v : 0;
@@ -58,6 +66,7 @@ public sealed class SaveData
         sb.Append("vs.losses=").Append(VersusLosses).Append('\n');
         sb.Append("vs.draws=").Append(VersusDraws).Append('\n');
         sb.Append("games=").Append(GamesPlayed).Append('\n');
+        if (PlayerName is { } playerName) sb.Append("name=").Append(playerName).Append('\n');
         foreach (var (key, value) in _best.OrderBy(p => p.Key, StringComparer.Ordinal))
         {
             sb.Append("best.").Append(key).Append('=').Append(value.ToString(CultureInfo.InvariantCulture)).Append('\n');
@@ -78,6 +87,12 @@ public sealed class SaveData
             var eq = line.IndexOf('=');
             if (eq <= 0) continue;
             var key = line[..eq];
+            if (key == "name")
+            {
+                data.PlayerName = line[(eq + 1)..];
+                continue;
+            }
+
             if (!int.TryParse(line[(eq + 1)..], NumberStyles.Integer, CultureInfo.InvariantCulture, out var value)) continue;
 
             switch (key)

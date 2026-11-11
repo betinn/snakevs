@@ -1,3 +1,4 @@
+using SnakeVs.Game.Online;
 using SnakeVs.Game.Storage;
 
 namespace SnakeVs.Game.Platform;
@@ -21,6 +22,9 @@ public interface IPlatformServices
 
     /// <summary>Where records and settings are kept (private app folder, browser storage...).</summary>
     ISaveStorage Storage { get; }
+
+    /// <summary>Online ranking, or null when the platform has none (Android, desktop).</summary>
+    ILeaderboard? Leaderboard { get; }
 
     SafeInsets GetSafeInsets();
 
