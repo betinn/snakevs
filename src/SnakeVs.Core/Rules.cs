@@ -9,6 +9,9 @@ public enum GameMode
     Endless,
 
     Versus,
+
+    /// <summary>One endless run through stages stacked on top of each other: clear a stage, a portal opens, the map scrolls on. No stops.</summary>
+    Journey,
 }
 
 public enum Difficulty
@@ -71,6 +74,32 @@ public static class Rules
     public const int PowerUpScore = 5;
     public const int LevelBonus = 100;
 
+    /// <summary>Rows of a journey stage, counting the wall row at its top where the portal opens.</summary>
+    public const int JourneyStageHeight = 30;
+    public const int JourneyGateWidth = 4;
+    public const int JourneyMaxApplesPerStage = 6;
+    public const int JourneyStageBonus = 50;
+    public const int JourneyRivalBonus = 50;
+
+    /// <summary>The rival snake of a stage stops growing here: it is there to get in the way, not to fill the room.</summary>
+    public const int JourneyRivalMaxLength = 8;
+    public const double JourneySpeedupMs = 2;
+    public const double JourneyMinStepMs = 80;
+
+    /// <summary>
+    /// Chance per step that the rival snake of a journey stage does not notice the player's body. That is how it can
+    /// be beaten: get between it and the apple and, sooner or later, it runs into you.
+    /// </summary>
+    public static double JourneyRivalBlindChance(Difficulty difficulty) => difficulty switch
+    {
+        Difficulty.Easy => 0.5,
+        Difficulty.Normal => 0.3,
+        _ => 0.15,
+    };
+
+    /// <summary>Steps a specter stays harmless after the player eats an apple.</summary>
+    public const int SpecterStunTicks = 14;
+
     public static double BaseStepMs(Difficulty difficulty) => difficulty switch
     {
         Difficulty.Easy => 170,
@@ -85,6 +114,18 @@ public static class Rules
         if (mode == GameMode.Versus) return baseMs;
         return Math.Max(MinStepMs, baseMs - (level - 1) * LevelSpeedupMs);
     }
+
+    public static double JourneyStepMs(Difficulty difficulty, int stage) =>
+        Math.Max(Math.Min(JourneyMinStepMs, BaseStepMs(difficulty)), BaseStepMs(difficulty) - (stage - 1) * JourneySpeedupMs);
+
+    /// <summary>Apples that open the portal of a journey stage (stage numbers start at 1).</summary>
+    public static int JourneyAppleGoal(int stage) => stage switch
+    {
+        <= 1 => 1,
+        <= 6 => 3,
+        <= 14 => 4,
+        _ => Math.Min(JourneyMaxApplesPerStage, 4 + (stage - 15) / 6),
+    };
 
     public static int AppleValue(int level) => AppleScore + (level - 1) * AppleScorePerLevel;
 

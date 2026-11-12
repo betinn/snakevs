@@ -12,16 +12,19 @@ public static class Program
     ///   SnakeVs                      play
     ///   SnakeVs --tour &lt;dir&gt;        capture every screen at several resolutions, then exit
     ///   SnakeVs --store-art &lt;dir&gt;   render launcher icons and store graphics, then exit
+    ///   SnakeVs --stage &lt;n&gt; [--auto] open the journey at stage n (with --auto the CPU plays)
     /// </summary>
     [STAThread]
     public static int Main(string[] args)
     {
         string? tour = null;
         string? art = null;
+        int? stage = null;
         for (var i = 0; i < args.Length - 1; i++)
         {
             if (args[i] == "--tour") tour = Path.GetFullPath(args[i + 1]);
             if (args[i] == "--store-art") art = Path.GetFullPath(args[i + 1]);
+            if (args[i] == "--stage" && int.TryParse(args[i + 1], out var n) && n > 0) stage = n;
         }
 
         // Automated runs use a throw-away save folder so they never touch real records.
@@ -30,7 +33,13 @@ public static class Program
             : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SnakeVs");
 
         var platform = new DesktopPlatform(dataDir);
-        using var game = new SnakeGame(platform, new GameOptions { TourDirectory = tour, StoreArtDirectory = art });
+        using var game = new SnakeGame(platform, new GameOptions
+        {
+            TourDirectory = tour,
+            StoreArtDirectory = art,
+            DemoStage = stage,
+            DemoAutopilot = args.Contains("--auto"),
+        });
         platform.Game = game;
         game.Run();
         return 0;

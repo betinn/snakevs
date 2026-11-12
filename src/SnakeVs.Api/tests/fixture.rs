@@ -41,6 +41,12 @@ fn rule_numbers_match_the_game() {
     assert_eq!(n("goldenScore"), rules::GOLDEN_SCORE);
     assert_eq!(n("powerUpScore"), rules::POWER_UP_SCORE);
     assert_eq!(n("levelBonus"), rules::LEVEL_BONUS);
+    assert_eq!(
+        n("journeyMaxApplesPerStage"),
+        rules::JOURNEY_MAX_APPLES_PER_STAGE
+    );
+    assert_eq!(n("journeyStageBonus"), rules::JOURNEY_STAGE_BONUS);
+    assert_eq!(n("journeyRivalBonus"), rules::JOURNEY_RIVAL_BONUS);
     assert_eq!(n("nameMaxLength"), rules::NAME_MAX_LENGTH as i64);
     assert_eq!(n("defaultTake"), rules::DEFAULT_TAKE);
     assert_eq!(n("maxTake"), rules::MAX_TAKE);

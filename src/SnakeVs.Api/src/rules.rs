@@ -13,6 +13,9 @@ pub const APPLE_SCORE_PER_LEVEL: i64 = 2;
 pub const GOLDEN_SCORE: i64 = 50;
 pub const POWER_UP_SCORE: i64 = 5;
 pub const LEVEL_BONUS: i64 = 100;
+pub const JOURNEY_MAX_APPLES_PER_STAGE: i64 = 6;
+pub const JOURNEY_STAGE_BONUS: i64 = 50;
+pub const JOURNEY_RIVAL_BONUS: i64 = 50;
 pub const NAME_MAX_LENGTH: usize = 12;
 pub const DEFAULT_TAKE: i64 = 10;
 pub const MAX_TAKE: i64 = 50;
@@ -26,6 +29,7 @@ pub enum Mode {
     Levels = 0,
     Endless = 1,
     Versus = 2,
+    Journey = 3,
 }
 
 /// Same numbers as the C# `Difficulty` enum (stored in the database).
@@ -42,6 +46,7 @@ impl Mode {
             "levels" => Some(Mode::Levels),
             "endless" => Some(Mode::Endless),
             "versus" => Some(Mode::Versus),
+            "journey" => Some(Mode::Journey),
             _ => None,
         }
     }
@@ -51,6 +56,7 @@ impl Mode {
             Mode::Levels => "Levels",
             Mode::Endless => "Endless",
             Mode::Versus => "Versus",
+            Mode::Journey => "Journey",
         }
     }
 }
@@ -88,7 +94,7 @@ pub struct Submission {
 
 /// Versus ends in a win or a loss, not a score worth ranking.
 pub fn is_ranked(mode: Mode) -> bool {
-    matches!(mode, Mode::Endless | Mode::Levels)
+    matches!(mode, Mode::Endless | Mode::Levels | Mode::Journey)
 }
 
 pub fn is_name_char(c: char) -> bool {
@@ -172,6 +178,19 @@ pub fn is_plausible(s: &Submission) -> bool {
                 return false;
             }
             (1 + apples / ENDLESS_APPLES_PER_SPEED_STEP, 0)
+        }
+        Mode::Journey => {
+            // Journey: `level` is the stage reached. Every stage left behind took at least one apple and paid
+            // JOURNEY_STAGE_BONUS * its number. A stage has at most JOURNEY_MAX_APPLES_PER_STAGE apples and one
+            // rival snake, worth its bonus plus the golden apple it leaves behind (doubled at best).
+            if level > apples + 1 || apples > level * JOURNEY_MAX_APPLES_PER_STAGE {
+                return false;
+            }
+            (
+                level,
+                JOURNEY_STAGE_BONUS as i128 * (level as i128 - 1) * level as i128 / 2
+                    + level as i128 * 2 * (JOURNEY_RIVAL_BONUS + GOLDEN_SCORE) as i128,
+            )
         }
         _ => {
             // Levels: 8 apples per level; clearing level l pays LEVEL_BONUS * l.

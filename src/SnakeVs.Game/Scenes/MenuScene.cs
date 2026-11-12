@@ -10,6 +10,7 @@ namespace SnakeVs.Game.Scenes;
 public sealed class MenuScene : Scene
 {
     private readonly ButtonList _buttons = new();
+    private readonly Button _journey;
     private readonly Button _classic;
     private readonly Button _levels;
     private readonly Button _versus;
@@ -25,7 +26,8 @@ public sealed class MenuScene : Scene
     public MenuScene(SnakeGame game) : base(game)
     {
         var t = game.Text;
-        _classic = _buttons.Add(new Button(t.Classic, ButtonStyle.Primary));
+        _journey = _buttons.Add(new Button(t.Journey, ButtonStyle.Primary));
+        _classic = _buttons.Add(new Button(t.Classic));
         _levels = _buttons.Add(new Button(t.Levels));
         _versus = _buttons.Add(new Button(t.Versus) { Accent = Palette.RivalHead });
         if (game.Platform.Leaderboard is not null) _ranking = _buttons.Add(new Button(t.Ranking) { Accent = Palette.Gold });
@@ -40,9 +42,9 @@ public sealed class MenuScene : Scene
         _attractView = BoardView.Fit(safe.Inflate(-24), Rules.BoardWidth, Rules.BoardHeight);
 
         var width = MathF.Min(560f, safe.W - 80f);
-        var height = 92f;
-        var gap = 18f;
         var count = _buttons.Buttons.Count;
+        var height = count > 6 ? 84f : 92f;
+        var gap = count > 6 ? 14f : 18f;
         var stack = height * count + gap * (count - 1);
         var titleBlock = 330f;
         var footer = 110f;
@@ -80,10 +82,11 @@ public sealed class MenuScene : Scene
         if (clicked is null) return;
         Game.PlaySound(Sfx.Click);
 
-        if (clicked == _classic) Game.SetScene(new PlayScene(Game, GameMode.Endless));
-        else if (clicked == _levels) Game.SetScene(new PlayScene(Game, GameMode.Levels));
-        else if (clicked == _versus) Game.SetScene(new PlayScene(Game, GameMode.Versus));
-        else if (clicked == _ranking && Game.Platform.Leaderboard is { } board) Game.SetScene(new RankingScene(Game, board, GameMode.Endless, Game.Save.Difficulty));
+        if (clicked == _journey) Game.SetScene(RunScene.Create(Game, GameMode.Journey));
+        else if (clicked == _classic) Game.SetScene(RunScene.Create(Game, GameMode.Endless));
+        else if (clicked == _levels) Game.SetScene(RunScene.Create(Game, GameMode.Levels));
+        else if (clicked == _versus) Game.SetScene(RunScene.Create(Game, GameMode.Versus));
+        else if (clicked == _ranking && Game.Platform.Leaderboard is { } board) Game.SetScene(new RankingScene(Game, board, GameMode.Journey, Game.Save.Difficulty));
         else if (clicked == _options) Game.SetScene(new OptionsScene(Game));
         else if (clicked == _help) Game.SetScene(new HelpScene(Game));
     }
@@ -111,9 +114,10 @@ public sealed class MenuScene : Scene
 
         var save = Game.Save;
         var t = Game.Text;
+        var journeyBest = save.GetBest(GameMode.Journey, save.Difficulty);
         var classicBest = save.GetBest(GameMode.Endless, save.Difficulty);
         var levelsBest = save.GetBest(GameMode.Levels, save.Difficulty);
-        var line1 = $"{t.Classic} {classicBest}  -  {t.Levels} {levelsBest}";
+        var line1 = $"{t.Journey} {journeyBest}  -  {t.Classic} {classicBest}  -  {t.Levels} {levelsBest}";
         var line2 = $"VS CPU {t.WinsLosses} {save.VersusWins}/{save.VersusLosses}  -  {t.DifficultyName(save.Difficulty)}";
         Font.DrawCentered(c, line1, new Vector2(cx, _footerY), Font.FitScale(line1, Safe.W - 60, 3f), Palette.Gold);
         Font.DrawCentered(c, line2, new Vector2(cx, _footerY + 38), Font.FitScale(line2, Safe.W - 60, 2.5f), Palette.TextDim);

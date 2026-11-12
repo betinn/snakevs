@@ -46,6 +46,14 @@ public sealed class GameOptions
     /// <summary>When set, renders store art (icons and feature graphic) here, then exits.</summary>
     public string? StoreArtDirectory { get; init; }
 
+    /// <summary>
+    /// Development aid: opens the journey directly at this stage instead of the menu. With <see cref="DemoAutopilot"/>
+    /// the CPU plays. Used to look at a late stage without playing up to it.
+    /// </summary>
+    public int? DemoStage { get; init; }
+
+    public bool DemoAutopilot { get; init; }
+
     /// <summary>UI language tag (e.g. "pt-BR"). When null, the current UI culture decides.</summary>
     public string? Language { get; init; }
 }

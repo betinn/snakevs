@@ -27,7 +27,7 @@ public static class Leaderboard
     private const string AccentedLetters = "ÁÀÂÃÉÊÍÓÔÕÚÜÇÑ";
 
     /// <summary>Ranked modes. Versus ends in a win or a loss, not a score worth ranking.</summary>
-    public static bool IsRanked(GameMode mode) => mode is GameMode.Endless or GameMode.Levels;
+    public static bool IsRanked(GameMode mode) => mode is GameMode.Endless or GameMode.Levels or GameMode.Journey;
 
     /// <summary>
     /// Upper case, letters/digits/space/.-_ only (what the pixel font draws), single spaces, at most
@@ -78,23 +78,34 @@ public static class Leaderboard
         const int boardCells = Rules.BoardWidth * Rules.BoardHeight;
         if (s.Apples > s.Steps) return false;
 
-        int topLevel;
+        long topLevel;
         Int128 levelBonus = 0;
         if (s.Mode == GameMode.Endless)
         {
             if (s.Apples > boardCells || s.Level != 1) return false;
             topLevel = Rules.EndlessSpeedLevel(s.Apples);
         }
-        else
+        else if (s.Mode == GameMode.Levels)
         {
             // Levels: 8 apples per level, a run ends in the level it reached. Clearing level l pays LevelBonus * l.
             if (s.Level > s.Apples / Rules.ApplesPerLevel + 1) return false;
             topLevel = s.Level;
             levelBonus = (Int128)Rules.LevelBonus * (s.Level - 1) * s.Level / 2;
         }
+        else
+        {
+            // Journey: Level is the stage reached. Every stage left behind took at least one apple and paid
+            // JourneyStageBonus * its number. A stage has at most JourneyMaxApplesPerStage apples and one rival
+            // snake, worth its bonus plus the golden apple it leaves behind (doubled at best).
+            if (s.Level > (long)s.Apples + 1 || s.Apples > (long)s.Level * Rules.JourneyMaxApplesPerStage) return false;
+            topLevel = s.Level;
+            levelBonus = (Int128)Rules.JourneyStageBonus * (s.Level - 1) * s.Level / 2
+                + (Int128)s.Level * 2 * (Rules.JourneyRivalBonus + Rules.GoldenScore);
+        }
 
         // 128-bit math: huge (fake) inputs must not overflow. Same formula as src/SnakeVs.Api/src/rules.rs.
-        Int128 perApple = 2 * ((Int128)Rules.AppleValue(topLevel) + Rules.GoldenScore + Rules.PowerUpScore);
+        var appleValue = Rules.AppleScore + (topLevel - 1) * Rules.AppleScorePerLevel;
+        Int128 perApple = 2 * ((Int128)appleValue + Rules.GoldenScore + Rules.PowerUpScore);
         return s.Score <= (Int128)s.Apples * perApple + levelBonus;
     }
 }

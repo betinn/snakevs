@@ -19,8 +19,8 @@ public sealed class RankingScene : Scene
     private readonly ScoreEntry? _mine;
     private readonly (GameMode Mode, Difficulty Difficulty) _mineBoard;
     private readonly GameMode? _replayMode;
-    private readonly Button _endless;
-    private readonly Button _levels;
+    private static readonly GameMode[] Modes = [GameMode.Journey, GameMode.Endless, GameMode.Levels];
+    private readonly Button[] _modes = new Button[Modes.Length];
     private readonly Button[] _difficulties = new Button[3];
     private readonly ButtonList _footer = new();
     private readonly Button? _again;
@@ -41,15 +41,16 @@ public sealed class RankingScene : Scene
         : base(game)
     {
         _board = board;
-        _mode = Leaderboard.IsRanked(mode) ? mode : GameMode.Endless;
+        _mode = Leaderboard.IsRanked(mode) ? mode : GameMode.Journey;
         _difficulty = difficulty;
         _mine = mine;
         _mineBoard = (_mode, difficulty);
         _replayMode = replayMode;
 
         var t = game.Text;
-        _endless = new Button(t.Classic);
-        _levels = new Button(t.Levels);
+        _modes[0] = new Button(t.Journey);
+        _modes[1] = new Button(t.Classic);
+        _modes[2] = new Button(t.Levels);
         _difficulties[(int)Difficulty.Easy] = new Button(t.Easy);
         _difficulties[(int)Difficulty.Normal] = new Button(t.Normal);
         _difficulties[(int)Difficulty.Hard] = new Button(t.Hard);
@@ -68,10 +69,8 @@ public sealed class RankingScene : Scene
 
         const float gap = 14f;
         var tabsY = top + 140f;
-        var half = (width - gap) / 2f;
-        _endless.Bounds = new RectF(left, tabsY, half, 72);
-        _levels.Bounds = new RectF(left + half + gap, tabsY, half, 72);
         var third = (width - gap * 2) / 3f;
+        for (var i = 0; i < _modes.Length; i++) _modes[i].Bounds = new RectF(left + i * (third + gap), tabsY, third, 72);
         for (var i = 0; i < 3; i++) _difficulties[i].Bounds = new RectF(left + i * (third + gap), tabsY + 72 + gap, third, 62);
 
         const float buttonH = 88f;
@@ -96,8 +95,13 @@ public sealed class RankingScene : Scene
             return;
         }
 
-        if (_endless.WasClicked(input) || (input.KeyDirection == Direction.Left && _mode != GameMode.Endless)) SwitchTo(GameMode.Endless, _difficulty);
-        else if (_levels.WasClicked(input) || (input.KeyDirection == Direction.Right && _mode != GameMode.Levels)) SwitchTo(GameMode.Levels, _difficulty);
+        var tab = Array.IndexOf(Modes, _mode);
+        if (input.KeyDirection == Direction.Left && tab > 0) SwitchTo(Modes[tab - 1], _difficulty);
+        else if (input.KeyDirection == Direction.Right && tab < Modes.Length - 1) SwitchTo(Modes[tab + 1], _difficulty);
+        for (var i = 0; i < _modes.Length; i++)
+        {
+            if (_modes[i].WasClicked(input)) SwitchTo(Modes[i], _difficulty);
+        }
 
         for (var i = 0; i < 3; i++)
         {
@@ -118,7 +122,7 @@ public sealed class RankingScene : Scene
         var clicked = _footer.Update(input);
         if (clicked is null) return;
         Game.PlaySound(Sfx.Click);
-        if (clicked == _again && _replayMode is { } replay) Game.SetScene(new PlayScene(Game, replay));
+        if (clicked == _again && _replayMode is { } replay) Game.SetScene(RunScene.Create(Game, replay));
         else GoToMenu();
     }
 
@@ -129,8 +133,7 @@ public sealed class RankingScene : Scene
         Ui.Title(c, Font, t.Ranking, new Vector2(Safe.Center.X, _titleY), Font.FitScale(t.Ranking, Safe.W - 60, 9f), Palette.Gold);
 
         var input = Game.Input;
-        _endless.Draw(c, Font, input, Time);
-        _levels.Draw(c, Font, input, Time);
+        foreach (var b in _modes) b.Draw(c, Font, input, Time);
         foreach (var b in _difficulties) b.Draw(c, Font, input, Time);
 
         Ui.Panel(c, _list);
@@ -218,8 +221,7 @@ public sealed class RankingScene : Scene
 
     private void RefreshTabs()
     {
-        _endless.Style = _mode == GameMode.Endless ? ButtonStyle.Primary : ButtonStyle.Normal;
-        _levels.Style = _mode == GameMode.Levels ? ButtonStyle.Primary : ButtonStyle.Normal;
+        for (var i = 0; i < _modes.Length; i++) _modes[i].Style = _mode == Modes[i] ? ButtonStyle.Primary : ButtonStyle.Normal;
         for (var i = 0; i < 3; i++) _difficulties[i].Style = (int)_difficulty == i ? ButtonStyle.Primary : ButtonStyle.Normal;
     }
 

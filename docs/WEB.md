@@ -1,8 +1,8 @@
 # Snake VS na web
 
 A versão web é o mesmo jogo do app, abrindo direto no menu do jogo (sem landing page). Roda no navegador com
-WebAssembly + WebGL. Tem um **ranking online** (só na web): ao fim de cada partida do Clássico ou de Níveis o jogador
-pode salvar a pontuação com nome/apelido.
+WebAssembly + WebGL. Tem um **ranking online** (só na web): ao fim de cada partida da Jornada, do Clássico ou de Níveis
+o jogador pode salvar a pontuação com nome/apelido.
 
 Na VM ficam só duas coisas:
 
@@ -39,11 +39,12 @@ CPU no total. O servidor ASP.NET que existia antes, com a mesma carga, foi de 65
 
 ## Ranking online
 
-- Fim de partida (Clássico e Níveis, pontuação > 0): botão **Salvar no ranking** abre um diálogo HTML (teclado nativo
+- Fim de partida (Jornada, Clássico e Níveis, pontuação > 0): botão **Salvar no ranking** abre um diálogo HTML (teclado nativo
   do celular) para o apelido. Depois de salvo, abre a tela de Ranking com a posição do jogador destacada (se não
   entrou no top 10, aparece embaixo com a posição real). Se falhar (sem internet), o botão vira "tentar de novo"
   e reenvia sem pedir o nome outra vez.
-- Menu: botão **Ranking** com abas Clássico/Níveis e Fácil/Normal/Difícil (top 10 de cada).
+- Menu: botão **Ranking** com abas Jornada/Clássico/Níveis e Fácil/Normal/Difícil (top 10 de cada).
+- Na Jornada, o campo `level` do envio é a fase alcançada.
 - VS CPU não entra: o resultado é vitória/derrota, não pontuação.
 - Apelido: até 12 caracteres, maiúsculas, letras (com acentos do português, Ñ e Ü), números, espaço, `.`, `-`, `_`
   (o que a fonte pixel desenha). Empates ficam com quem chegou primeiro.
@@ -52,7 +53,7 @@ CPU no total. O servidor ASP.NET que existia antes, com a mesma carga, foi de 65
 
 | Método | Rota | |
 |---|---|---|
-| `GET` | `/api/scores/{endless\|levels}/{easy\|normal\|hard}?take=10` | Top N (máx. 50). |
+| `GET` | `/api/scores/{journey\|endless\|levels}/{easy\|normal\|hard}?take=10` | Top N (máx. 50). |
 | `POST` | `/api/scores` | `{ mode, difficulty, name, score, apples, level, steps }` → `201 { id, rank, total }`. |
 | `DELETE` | `/api/scores/{id}` | Moderação, header `X-Admin-Key`. Desligado sem `SNAKEVS_ADMIN_KEY`. |
 | `GET` | `/api/health` | `ok` (para monitoramento). |
@@ -75,7 +76,7 @@ servidor). O arquivo `tests/fixtures/leaderboard.json` guarda os casos e as resp
 
 - `LeaderboardFixtureTests` (C#) falha se as regras do jogo mudarem e o fixture não for regenerado;
 - `cargo test` (Rust) falha se o servidor não bater com o fixture;
-- o fixture inclui 36 partidas reais jogadas pela IA: o servidor tem que aceitar todas.
+- o fixture inclui partidas reais jogadas pela IA em todos os modos com ranking: o servidor tem que aceitar todas.
 
 Mudou `Rules.cs` ou `Leaderboard.cs`? Rode
 `SNAKEVS_UPDATE_FIXTURES=1 dotnet test tests/SnakeVs.Core.Tests --filter LeaderboardFixture`, depois
@@ -83,7 +84,7 @@ Mudou `Rules.cs` ou `Leaderboard.cs`? Rode
 
 ### Proteções e limites
 
-- Apelido normalizado e pontuação conferida contra as regras do jogo (pontos por maçã, bônus, níveis, passos).
+- Apelido normalizado e pontuação conferida contra as regras do jogo (pontos por maçã, bônus, níveis, fases, passos).
 - Limite por IP (atrás do nginx, o IP real vem no `X-Forwarded-For`, aceito só de conexões locais).
 - Corpo máximo de 4 KB, timeouts de 5 s, número fixo de threads.
 - **Limite honesto**: o jogo roda no navegador, então quem souber chamar a API consegue enviar uma pontuação
@@ -99,7 +100,9 @@ dotnet run --project src/SnakeVs.Web                                            
 # abrir http://localhost:5080/?api=http://localhost:5090/
 ```
 
-O `?api=` só funciona em `localhost` (um link não consegue apontar o jogo publicado para outra API). Sem ele, o jogo
+Para ver uma fase da Jornada sem jogar até ela: `http://localhost:5080/?stage=12` (com `&auto=1` a CPU joga).
+
+O `?api=` e o `?stage=` só funcionam em `localhost` (um link não consegue apontar o jogo publicado para outra API). Sem ele, o jogo
 local abre com o ranking indisponível.
 
 ## Gerar
@@ -161,6 +164,8 @@ o `X-Forwarded-For` que o limite por IP usa.
 - [ ] `curl http://127.0.0.1:5090/api/health` na VM responde `ok`; `/etc/snakevs-api.env` com a chave de moderação.
 - [ ] Abrir o site no celular e no PC: menu, toque/clique, teclado e som após o primeiro toque.
 - [ ] Jogar uma partida, salvar no ranking com um apelido e ver a posição no Ranking.
+- [ ] Jornada: atravessar um portal e ver o mapa rolar sem a cobra parar (o conteúdo da fase não pode vazar da moldura).
+- [ ] Atualizar o `snakevs-api` junto com o jogo: o servidor antigo não conhece o modo `journey` e recusa esses envios.
 - [ ] DevTools > Network: `dotnet.native.*.wasm` com `content-encoding: gzip` (ou `br`) e `content-type: application/wasm`.
 - [ ] Backup periódico do `scores.db`.
 - [ ] **Política de privacidade**: com o ranking, o site guarda no servidor o apelido digitado, a pontuação e a data

@@ -108,6 +108,28 @@ fn boards_are_separated_by_mode_and_difficulty() {
 }
 
 #[test]
+fn journey_has_its_own_ranking() {
+    let app = app();
+    // Stage 4 reached with 20 apples: within the rules. The same run in stage 1 would hold too many apples.
+    let stage4 = json!({ "mode": "Journey", "difficulty": "Normal", "name": "ana", "score": 700, "apples": 20, "level": 4, "steps": 2000 }).to_string();
+    assert_eq!(call(&app, "POST", "/api/scores", &stage4).status, 201);
+    assert_eq!(
+        call(
+            &app,
+            "POST",
+            "/api/scores",
+            &run("beto", 100, "Journey", "Normal")
+        )
+        .status,
+        400
+    );
+    let list = top(&app, "/api/scores/journey/normal");
+    assert_eq!(list.len(), 1);
+    assert_eq!(list[0]["level"], 4);
+    assert!(top(&app, "/api/scores/endless/normal").is_empty());
+}
+
+#[test]
 fn take_is_clamped() {
     let app = app();
     for i in 0..12 {

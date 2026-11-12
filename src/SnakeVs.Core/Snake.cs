@@ -130,6 +130,18 @@ public sealed class Snake
         return removable;
     }
 
+    /// <summary>Cuts the body at <paramref name="index"/> (that segment and everything behind it is lost). The head always stays.</summary>
+    internal int CutFrom(int index)
+    {
+        index = Math.Max(1, index);
+        if (index >= _body.Count) return 0;
+        var removed = _body.Count - index;
+        _body.RemoveRange(index, removed);
+        GrowPending = 0;
+        PreviousTail = _body[^1];
+        return removed;
+    }
+
     /// <summary>Whether the tail cell will be free after the next move.</summary>
     public bool TailWillMove => GrowPending == 0;
 

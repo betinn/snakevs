@@ -51,6 +51,43 @@ public static class Palette
     public static readonly Color Shrink = Hex(0xFF9F43);
     public static readonly Color Shield = Hex(0x5C8DFF);
 
+    // Journey mode.
+    public static readonly Color Portal = Hex(0x5CE1E6);
+    public static readonly Color PortalDoor = Hex(0x5A3A52);
+    public static readonly Color PortalLock = Hex(0xFF6B6B);
+    public static readonly Color Rail = Hex(0x2F3868);
+    public static readonly Color SawBlade = Hex(0xD5DBF5);
+    public static readonly Color SawHub = Hex(0xFF4D5E);
+    public static readonly Color Laser = Hex(0xFF3B6B);
+    public static readonly Color LaserCore = Hex(0xFFE3EA);
+    public static readonly Color Emitter = Hex(0x2B2F55);
+    public static readonly Color PhaseBlock = Hex(0x7A5CFF);
+    public static readonly Color PhaseBlockTop = Hex(0xA590FF);
+    public static readonly Color Lava = Hex(0xFF5A1F);
+    public static readonly Color LavaGlow = Hex(0xFFB02E);
+    public static readonly Color LavaDeep = Hex(0xB3260D);
+    public static readonly Color Meteor = Hex(0xFF9F43);
+    public static readonly Color Ice = Hex(0x9EE6FF);
+    public static readonly Color TeleportA = Hex(0x4FC3F7);
+    public static readonly Color TeleportB = Hex(0xFF7AD9);
+    public static readonly Color Bug = Hex(0xE0524D);
+    public static readonly Color BugShell = Hex(0x8F2B33);
+    public static readonly Color Specter = Hex(0xE8E6FF);
+    public static readonly Color SpecterStunned = Hex(0x5C8DFF);
+    public static readonly Color Darkness = Hex(0x04050C);
+
+    public static Color Teleport(int pair) => pair % 2 == 0 ? TeleportA : TeleportB;
+
+    public static Color Hazard(HazardKind kind) => kind switch
+    {
+        HazardKind.Saw => SawBlade,
+        HazardKind.Laser => Laser,
+        HazardKind.Phase => PhaseBlock,
+        HazardKind.Lava => Lava,
+        HazardKind.Meteor => Meteor,
+        _ => Text,
+    };
+
     public static Color PowerUp(PowerUpKind kind) => kind switch
     {
         PowerUpKind.Slow => Slow,
