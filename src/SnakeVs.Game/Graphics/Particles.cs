@@ -44,14 +44,15 @@ public sealed class Particles
         }
     }
 
-    public void Draw(Canvas canvas)
+    /// <param name="offset">Added to every position: the journey keeps particles in map space and scrolls them with it.</param>
+    public void Draw(Canvas canvas, Vector2 offset = default)
     {
         for (var i = 0; i < _items.Length; i++)
         {
             ref var p = ref _items[i];
             if (p.Life <= 0) continue;
             var t = p.Life / p.MaxLife;
-            canvas.FillCircle(p.Position, p.Size * (0.4f + 0.6f * t), p.Color * t);
+            canvas.FillCircle(p.Position + offset, p.Size * (0.4f + 0.6f * t), p.Color * t);
         }
     }
 
@@ -90,12 +91,12 @@ public sealed class FloatingTexts
         }
     }
 
-    public void Draw(Canvas canvas, PixelFont font)
+    public void Draw(Canvas canvas, PixelFont font, Vector2 offset = default)
     {
         foreach (var item in _items)
         {
             var alpha = MathHelper.Clamp(item.Life / 0.4f, 0f, 1f);
-            font.DrawCentered(canvas, item.Text, item.Position, item.Scale, item.Color, true, alpha);
+            font.DrawCentered(canvas, item.Text, item.Position + offset, item.Scale, item.Color, true, alpha);
         }
     }
 

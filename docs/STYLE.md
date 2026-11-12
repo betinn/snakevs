@@ -24,6 +24,26 @@ neon-like snakes with a gentle glow, and a chunky 5x7 pixel font. Shapes are rou
 | Button | `#232B57` | Secondary actions |
 | Danger | `#FF6B6B` | Game over title |
 
+Journey mode:
+
+| Role | Hex | Use |
+|---|---|---|
+| Portal | `#5CE1E6` | Open portal, its arrows and posts, stage banner, journey titles |
+| Portal door / lock | `#5A3A52` / `#FF6B6B` | Closed portal in the top wall |
+| Rail / saw | `#2F3868` / `#D5DBF5` with `#FF4D5E` hub | Saw blades and the rails they run on |
+| Laser | `#FF3B6B` with `#FFE3EA` core | Beams (thin blinking line while warning) and emitter lenses |
+| Phase block | `#7A5CFF` / `#A590FF` | Blocks that come and go (outline while gone) |
+| Lava | `#FF5A1F` / `#FFB02E` / `#B3260D` | Body / surface glow / depth |
+| Meteor | `#FF9F43` | Crosshairs, falling rock, impact |
+| Ice | `#9EE6FF` at 20% | Ice cells |
+| Teleporter | `#4FC3F7` and `#FF7AD9` | One color per pair of rings |
+| Bug | `#E0524D` / `#8F2B33` | Shell / legs and head |
+| Specter | `#E8E6FF`, stunned `#5C8DFF` | Ghost enemy |
+| Darkness | `#04050C` | Blackout stages |
+
+Danger is always warm (red, orange, pink) and telegraphed before it can hurt: lasers blink, phase blocks flash,
+meteors show crosshairs, portal posts show an outline, creatures blink while they wake up.
+
 Power-up colors: Slow `#4FC3F7`, Ghost `#B388FF`, Double `#FFD23F`, Shrink `#FF9F43`, Shield `#5C8DFF`.
 
 ## Typography
@@ -47,6 +67,8 @@ Power-up colors: Slow `#4FC3F7`, Ghost `#B388FF`, Double `#FFD23F`, Shrink `#FF9
 - Snakes move cell by cell but are drawn interpolated between steps (smooth sliding).
 - Pickups pulse; expiring items blink during their last 2-2.5 s.
 - Every event has sound + particles; crashes add screen shake and a longer vibration.
+- Journey: the board is a window. Going through a portal scrolls it to the next stage (about 0.6 s, eased in and
+  out) while the game keeps running; a banner with the stage number and name slides over the top for 2 s.
 - Scene changes fade through the background color in about 0.15 s; panels pop in with an ease-out-back.
 
 ## Assets

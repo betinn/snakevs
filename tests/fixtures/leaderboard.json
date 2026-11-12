@@ -10,6 +10,9 @@
     "goldenScore": 50,
     "powerUpScore": 5,
     "levelBonus": 100,
+    "journeyMaxApplesPerStage": 6,
+    "journeyStageBonus": 50,
+    "journeyRivalBonus": 50,
     "nameMaxLength": 12,
     "defaultTake": 10,
     "maxTake": 50
@@ -275,6 +278,123 @@
       "level": 1,
       "steps": 30,
       "expected": false
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Normal",
+      "score": 10,
+      "apples": 1,
+      "level": 1,
+      "steps": 30,
+      "expected": true
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Normal",
+      "score": 60,
+      "apples": 1,
+      "level": 2,
+      "steps": 60,
+      "expected": true
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Normal",
+      "score": 60,
+      "apples": 1,
+      "level": 3,
+      "steps": 60,
+      "expected": false
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Easy",
+      "score": 100,
+      "apples": 13,
+      "level": 2,
+      "steps": 500,
+      "expected": false
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Easy",
+      "score": 100,
+      "apples": 12,
+      "level": 2,
+      "steps": 500,
+      "expected": true
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Hard",
+      "score": 330,
+      "apples": 1,
+      "level": 1,
+      "steps": 30,
+      "expected": true
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Hard",
+      "score": 331,
+      "apples": 1,
+      "level": 1,
+      "steps": 30,
+      "expected": false
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Hard",
+      "score": 5000,
+      "apples": 40,
+      "level": 13,
+      "steps": 1400,
+      "expected": true
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Hard",
+      "score": 1000000,
+      "apples": 10,
+      "level": 3,
+      "steps": 1400,
+      "expected": false
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Hard",
+      "score": 0,
+      "apples": 10,
+      "level": 3,
+      "steps": 1400,
+      "expected": false
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Normal",
+      "score": 2147483647,
+      "apples": 2147483647,
+      "level": 2147483647,
+      "steps": 9223372036854775807,
+      "expected": true
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Normal",
+      "score": 2147483647,
+      "apples": 10,
+      "level": 2147483647,
+      "steps": 9223372036854775807,
+      "expected": false
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Normal",
+      "score": 2147483647,
+      "apples": 2147483647,
+      "level": 357913942,
+      "steps": 9223372036854775807,
+      "expected": true
     }
   ],
   "realRuns": [
@@ -565,6 +685,150 @@
       "apples": 180,
       "level": 23,
       "steps": 3800
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Easy",
+      "score": 27306,
+      "apples": 121,
+      "level": 30,
+      "steps": 3370
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Easy",
+      "score": 6428,
+      "apples": 48,
+      "level": 15,
+      "steps": 1377
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Easy",
+      "score": 18575,
+      "apples": 97,
+      "level": 25,
+      "steps": 2601
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Easy",
+      "score": 28904,
+      "apples": 126,
+      "level": 31,
+      "steps": 3525
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Easy",
+      "score": 11712,
+      "apples": 71,
+      "level": 20,
+      "steps": 2154
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Easy",
+      "score": 18370,
+      "apples": 92,
+      "level": 25,
+      "steps": 2720
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Normal",
+      "score": 31131,
+      "apples": 137,
+      "level": 32,
+      "steps": 3929
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Normal",
+      "score": 25124,
+      "apples": 117,
+      "level": 29,
+      "steps": 3120
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Normal",
+      "score": 6521,
+      "apples": 49,
+      "level": 15,
+      "steps": 1459
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Normal",
+      "score": 23187,
+      "apples": 108,
+      "level": 28,
+      "steps": 2988
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Normal",
+      "score": 11820,
+      "apples": 72,
+      "level": 20,
+      "steps": 2082
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Normal",
+      "score": 12980,
+      "apples": 74,
+      "level": 21,
+      "steps": 2271
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Hard",
+      "score": 5077,
+      "apples": 44,
+      "level": 13,
+      "steps": 1528
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Hard",
+      "score": 9413,
+      "apples": 60,
+      "level": 18,
+      "steps": 1948
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Hard",
+      "score": 16910,
+      "apples": 87,
+      "level": 24,
+      "steps": 2614
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Hard",
+      "score": 8412,
+      "apples": 56,
+      "level": 17,
+      "steps": 1671
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Hard",
+      "score": 80531,
+      "apples": 247,
+      "level": 51,
+      "steps": 5982
+    },
+    {
+      "mode": "Journey",
+      "difficulty": "Hard",
+      "score": 6754,
+      "apples": 50,
+      "level": 15,
+      "steps": 1573
     }
   ]
 }

@@ -57,7 +57,13 @@ public sealed class WebPlatform(IJSInProcessRuntime js) : IPlatformServices
         if (_game is null)
         {
             RegisterEngine();
-            _game = new SnakeGame(this, new GameOptions { Language = js.Invoke<string>("snakevs.language") });
+            var demo = js.Invoke<int[]>("snakevs.demo");
+            _game = new SnakeGame(this, new GameOptions
+            {
+                Language = js.Invoke<string>("snakevs.language"),
+                DemoStage = demo[0] > 0 ? demo[0] : null,
+                DemoAutopilot = demo[1] != 0,
+            });
             _game.Run();
             _graphics = (GraphicsDeviceManager?)_game.Services.GetService(typeof(IGraphicsDeviceManager));
         }

@@ -141,7 +141,8 @@ public sealed class SnakeGame : Microsoft.Xna.Framework.Game
             return;
         }
 
-        SetScene(new MenuScene(this), instant: true);
+        if (_options.DemoStage is { } stage) SetScene(RunScene.Create(this, GameMode.Journey, _options.DemoAutopilot, stage), instant: true);
+        else SetScene(new MenuScene(this), instant: true);
         if (_options.TourDirectory is { } tourDir) _tour = new AutoTour(this, tourDir);
     }
 

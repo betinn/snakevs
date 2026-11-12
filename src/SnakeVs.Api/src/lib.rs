@@ -2,7 +2,7 @@
 //! [`Response`] from [`App::handle`], so everything here is testable without sockets.
 //!
 //! Routes (JSON, same contract as `LeaderboardJson` in SnakeVs.Core):
-//!   GET    /api/scores/{endless|levels}/{easy|normal|hard}?take=10   top N (max 50)
+//!   GET    /api/scores/{journey|endless|levels}/{easy|normal|hard}?take=10   top N (max 50)
 //!   POST   /api/scores                                               {mode, difficulty, name, score, apples, level, steps}
 //!   DELETE /api/scores/{id}                                          moderation, header X-Admin-Key
 //!   GET    /api/health                                               "ok"

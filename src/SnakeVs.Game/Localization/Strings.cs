@@ -6,6 +6,20 @@ namespace SnakeVs.Game.Localization;
 /// <summary>All user facing text. Portuguese (Brazil) for "pt" cultures, English otherwise.</summary>
 public sealed class Strings
 {
+    public required string Journey { get; init; }
+    public required string Stage { get; init; }
+    public required string PortalOpen { get; init; }
+    public required string Chaos { get; init; }
+    public required string TailCut { get; init; }
+    public required string AppleStolen { get; init; }
+    public required string RivalDown { get; init; }
+
+    /// <summary>Names of the stage elements, indexed by <see cref="StageElement"/>.</summary>
+    public required string[] StageNames { get; init; }
+
+    /// <summary>One tip per stage element, shown when a stage starts. Indexed by <see cref="StageElement"/>.</summary>
+    public required string[] StageTips { get; init; }
+    public required string[] HelpJourney { get; init; }
     public required string Classic { get; init; }
     public required string Levels { get; init; }
     public required string Speed { get; init; }
@@ -81,6 +95,18 @@ public sealed class Strings
 
     public string PowerUpName(PowerUpKind kind) => PowerUpNames[(int)kind];
 
+    /// <summary>Name of a journey stage: its element, two of them joined, or "chaos" when there are more.</summary>
+    public string StageName(IReadOnlyList<StageElement> elements) => elements.Count switch
+    {
+        0 => string.Empty,
+        1 => StageNames[(int)elements[0]],
+        2 => $"{StageNames[(int)elements[0]]} + {StageNames[(int)elements[1]]}",
+        _ => Chaos,
+    };
+
+    /// <summary>Tip for a stage with a single element; mixed stages have been explained before.</summary>
+    public string StageTip(IReadOnlyList<StageElement> elements) => elements.Count == 1 ? StageTips[(int)elements[0]] : string.Empty;
+
     public static Strings ForCulture(CultureInfo culture) => ForLanguage(culture.TwoLetterISOLanguageName);
 
     /// <summary>Picks the strings for a language tag such as "pt", "pt-BR" or "en-US".</summary>
@@ -91,6 +117,41 @@ public sealed class Strings
 
     public static readonly Strings Portuguese = new()
     {
+        Journey = "JORNADA",
+        Stage = "FASE",
+        PortalOpen = "PORTAL ABERTO!",
+        Chaos = "CAOS",
+        TailCut = "CORTE!",
+        AppleStolen = "ROUBADA!",
+        RivalDown = "RIVAL FORA!",
+        StageNames =
+        [
+            "LARGADA", "BLOCOS", "SERRAS", "LASERS", "BESOUROS", "PISCA-PISCA", "LAVA",
+            "TELEPORTES", "ESPECTRO", "APAGÃO", "GELO", "METEOROS", "COBRA RIVAL", "TORRE LASER",
+        ],
+        StageTips =
+        [
+            "COMA A MAÇÃ E SUBA PELO PORTAL",
+            "DESVIE DOS BLOCOS",
+            "NA CABEÇA MATA, NA CAUDA CORTA",
+            "PASSE QUANDO O RAIO APAGAR",
+            "NÃO DEIXE MORDER A CABEÇA",
+            "ELES SOMEM E VOLTAM",
+            "A LAVA SOBE. CORRA!",
+            "ENTRE NUM ANEL, SAIA NO OUTRO",
+            "COMA PARA ATORDOAR O ESPECTRO",
+            "SIGA A LUZ",
+            "NO GELO NÃO DÁ PARA VIRAR",
+            "FUJA DAS MIRAS",
+            "FAÇA ELA BATER EM VOCÊ",
+            "A TORRE GIRA. ACOMPANHE!",
+        ],
+        HelpJourney =
+        [
+            "JORNADA: FASES SEM PARADA. COMA AS",
+            "MAÇÃS, SUBA PELO PORTAL E O MAPA ANDA.",
+            "PERIGO NA CABEÇA MATA, NA CAUDA CORTA.",
+        ],
         Classic = "CLÁSSICO",
         Levels = "NÍVEIS",
         Speed = "VELOCIDADE",
@@ -132,7 +193,7 @@ public sealed class Strings
         Off = "DESLIGADO",
         Record = "RECORDE",
         WinsLosses = "V/D",
-        Tagline = "CLÁSSICO, NÍVEIS E PODERES",
+        Tagline = "JORNADA, CLÁSSICO, NÍVEIS E DUELO",
         Apples = "MAÇÃS",
         ShieldSaved = "ESCUDO!",
         Ranking = "RANKING",
@@ -178,6 +239,41 @@ public sealed class Strings
 
     public static readonly Strings English = new()
     {
+        Journey = "JOURNEY",
+        Stage = "STAGE",
+        PortalOpen = "PORTAL OPEN!",
+        Chaos = "CHAOS",
+        TailCut = "CUT!",
+        AppleStolen = "STOLEN!",
+        RivalDown = "RIVAL OUT!",
+        StageNames =
+        [
+            "KICK-OFF", "BLOCKS", "SAWS", "LASERS", "BEETLES", "BLINKERS", "LAVA",
+            "TELEPORTS", "SPECTER", "BLACKOUT", "ICE", "METEORS", "RIVAL SNAKE", "LASER TOWER",
+        ],
+        StageTips =
+        [
+            "EAT THE APPLE, THEN UP THE PORTAL",
+            "MIND THE BLOCKS",
+            "HEAD: DEAD. TAIL: CUT",
+            "CROSS WHEN THE BEAM IS OFF",
+            "DO NOT LET THEM BITE YOUR HEAD",
+            "THEY COME AND GO",
+            "THE LAVA RISES. RUN!",
+            "IN ONE RING, OUT THE OTHER",
+            "EAT TO STUN THE SPECTER",
+            "FOLLOW THE LIGHT",
+            "NO TURNING ON ICE",
+            "GET OFF THE CROSSHAIRS",
+            "MAKE IT CRASH INTO YOU",
+            "THE TOWER TURNS. KEEP UP!",
+        ],
+        HelpJourney =
+        [
+            "JOURNEY: STAGES WITH NO STOPS. EAT THE",
+            "APPLES, GO UP THE PORTAL, THE MAP MOVES ON.",
+            "HAZARDS KILL THE HEAD AND CUT THE TAIL.",
+        ],
         Classic = "CLASSIC",
         Levels = "LEVELS",
         Speed = "SPEED",
@@ -219,7 +315,7 @@ public sealed class Strings
         Off = "OFF",
         Record = "BEST",
         WinsLosses = "W/L",
-        Tagline = "CLASSIC, LEVELS AND POWER-UPS",
+        Tagline = "JOURNEY, CLASSIC, LEVELS AND DUEL",
         Apples = "APPLES",
         ShieldSaved = "SHIELD!",
         Ranking = "RANKING",

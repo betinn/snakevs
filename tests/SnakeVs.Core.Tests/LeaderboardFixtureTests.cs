@@ -43,6 +43,19 @@ public class LeaderboardFixtureTests
         new(GameMode.Levels, Difficulty.Easy, "T", 10, -1, 1, 30),
         new(GameMode.Levels, Difficulty.Easy, "T", 10, 1, 1, 0),
         new(GameMode.Versus, Difficulty.Normal, "T", 10, 1, 1, 30),
+        new(GameMode.Journey, Difficulty.Normal, "T", 10, 1, 1, 30),
+        new(GameMode.Journey, Difficulty.Normal, "T", 60, 1, 2, 60),
+        new(GameMode.Journey, Difficulty.Normal, "T", 60, 1, 3, 60),
+        new(GameMode.Journey, Difficulty.Easy, "T", 100, 13, 2, 500),
+        new(GameMode.Journey, Difficulty.Easy, "T", 100, 12, 2, 500),
+        new(GameMode.Journey, Difficulty.Hard, "T", 330, 1, 1, 30),
+        new(GameMode.Journey, Difficulty.Hard, "T", 331, 1, 1, 30),
+        new(GameMode.Journey, Difficulty.Hard, "T", 5000, 40, 13, 1400),
+        new(GameMode.Journey, Difficulty.Hard, "T", 1_000_000, 10, 3, 1400),
+        new(GameMode.Journey, Difficulty.Hard, "T", 0, 10, 3, 1400),
+        new(GameMode.Journey, Difficulty.Normal, "T", int.MaxValue, int.MaxValue, int.MaxValue, long.MaxValue),
+        new(GameMode.Journey, Difficulty.Normal, "T", int.MaxValue, 10, int.MaxValue, long.MaxValue),
+        new(GameMode.Journey, Difficulty.Normal, "T", int.MaxValue, int.MaxValue, 357_913_942, long.MaxValue),
     ];
 
     private static string FixturePath
@@ -104,6 +117,9 @@ public class LeaderboardFixtureTests
                 ["goldenScore"] = Rules.GoldenScore,
                 ["powerUpScore"] = Rules.PowerUpScore,
                 ["levelBonus"] = Rules.LevelBonus,
+                ["journeyMaxApplesPerStage"] = Rules.JourneyMaxApplesPerStage,
+                ["journeyStageBonus"] = Rules.JourneyStageBonus,
+                ["journeyRivalBonus"] = Rules.JourneyRivalBonus,
                 ["nameMaxLength"] = Leaderboard.NameMaxLength,
                 ["defaultTake"] = Leaderboard.DefaultTake,
                 ["maxTake"] = Leaderboard.MaxTake,
@@ -168,6 +184,18 @@ public class LeaderboardFixtureTests
 
                 var p = s.Player;
                 if (p.Score > 0) runs.Add(ToJson(new ScoreSubmission(mode, difficulty, "RUN", p.Score, p.ApplesEaten, s.Level, s.StepCount), null));
+            }
+        }
+
+        foreach (var difficulty in Enum.GetValues<Difficulty>())
+        {
+            for (var game = 0; game < 6; game++)
+            {
+                var s = new JourneySession(difficulty, seed: 700 + game);
+                s.Player.IsAiControlled = true;
+                for (var step = 0; step < 6000 && s.State == SessionState.Playing; step++) s.Update(s.StepIntervalMs);
+                var p = s.Player;
+                if (p.Score > 0) runs.Add(ToJson(new ScoreSubmission(GameMode.Journey, difficulty, "RUN", p.Score, p.ApplesEaten, s.StageNumber, s.StepCount), null));
             }
         }
 

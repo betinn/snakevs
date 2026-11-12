@@ -11,6 +11,8 @@ public sealed class Canvas : IDisposable
 {
     private const int CircleSize = 256;
     private const int GlowSize = 128;
+    private static readonly RasterizerState Clipped = new() { CullMode = CullMode.None, ScissorTestEnable = true };
+    private Matrix _transform = Matrix.Identity;
 
     public Canvas(GraphicsDevice device)
     {
@@ -30,8 +32,35 @@ public sealed class Canvas : IDisposable
     public Texture2D Ring { get; }
     public Texture2D Glow { get; }
 
-    public void Begin(Matrix transform) =>
+    public void Begin(Matrix transform)
+    {
+        _transform = transform;
         Batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone, null, transform);
+    }
+
+    /// <summary>
+    /// From here until <see cref="EndClip"/>, nothing is drawn outside the rectangle (virtual units). Used by the
+    /// journey board, whose content scrolls under its frame. Clips do not nest.
+    /// </summary>
+    public void BeginClip(RectF area)
+    {
+        Batch.End();
+        var scale = _transform.M11;
+        var left = (int)MathF.Round(area.X * scale + _transform.M41);
+        var top = (int)MathF.Round(area.Y * scale + _transform.M42);
+        var right = (int)MathF.Round(area.Right * scale + _transform.M41);
+        var bottom = (int)MathF.Round(area.Bottom * scale + _transform.M42);
+        var bounds = Device.Viewport.Bounds;
+        var clip = Rectangle.Intersect(new Rectangle(left, top, Math.Max(0, right - left), Math.Max(0, bottom - top)), bounds);
+        Device.ScissorRectangle = clip.Width > 0 && clip.Height > 0 ? clip : new Rectangle(bounds.X, bounds.Y, 1, 1);
+        Batch.Begin(SpriteSortMode.Deferred, BlendState.AlphaBlend, SamplerState.LinearClamp, DepthStencilState.None, Clipped, null, _transform);
+    }
+
+    public void EndClip()
+    {
+        Batch.End();
+        Begin(_transform);
+    }
 
     public void End() => Batch.End();
 

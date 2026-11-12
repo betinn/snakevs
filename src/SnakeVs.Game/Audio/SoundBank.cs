@@ -14,6 +14,13 @@ public enum Sfx
     Win,
     Lose,
     Spawn,
+    Portal,
+    Stage,
+    Zap,
+    Cut,
+    Boom,
+    Warp,
+    Stun,
 }
 
 /// <summary>
@@ -40,6 +47,13 @@ public sealed class SoundBank : IDisposable
             Add(Sfx.Win, Concat(Tone(Wave.Triangle, 523, 523, 0.1, 0.5), Tone(Wave.Triangle, 659, 659, 0.1, 0.5), Tone(Wave.Triangle, 784, 784, 0.1, 0.5), Tone(Wave.Triangle, 1047, 1047, 0.35, 0.5)));
             Add(Sfx.Lose, Concat(Tone(Wave.Triangle, 392, 392, 0.14, 0.5), Tone(Wave.Triangle, 330, 330, 0.14, 0.5), Tone(Wave.Triangle, 262, 200, 0.4, 0.5)));
             Add(Sfx.Spawn, Tone(Wave.Triangle, 1200, 1600, 0.05, 0.2));
+            Add(Sfx.Portal, Concat(Tone(Wave.Triangle, 392, 784, 0.12, 0.45), Tone(Wave.Triangle, 784, 1568, 0.22, 0.45)));
+            Add(Sfx.Stage, Concat(Tone(Wave.Square, 659, 659, 0.06, 0.22), Tone(Wave.Square, 988, 988, 0.06, 0.22), Tone(Wave.Square, 1319, 1319, 0.16, 0.22)));
+            Add(Sfx.Zap, Concat(Tone(Wave.Square, 1800, 500, 0.07, 0.14), Tone(Wave.Noise, 0, 0, 0.05, 0.08)));
+            Add(Sfx.Cut, Concat(Tone(Wave.Noise, 0, 0, 0.05, 0.25), Tone(Wave.Square, 420, 160, 0.12, 0.25)));
+            Add(Sfx.Boom, Concat(Tone(Wave.Noise, 0, 0, 0.16, 0.3), Tone(Wave.Triangle, 140, 50, 0.2, 0.5)));
+            Add(Sfx.Warp, Tone(Wave.Triangle, 1500, 300, 0.16, 0.4));
+            Add(Sfx.Stun, Concat(Tone(Wave.Triangle, 900, 600, 0.08, 0.35), Tone(Wave.Triangle, 600, 400, 0.12, 0.35)));
         }
         catch (Exception)
         {

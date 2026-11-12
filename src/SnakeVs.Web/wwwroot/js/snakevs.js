@@ -273,6 +273,15 @@
 
         askName,
 
+        // Local development only: http://localhost:5080/?stage=7&auto=1 opens the journey at that stage
+        // (auto: the CPU plays). Answers [stage, auto], zeros when not asked for.
+        demo() {
+            if (!['localhost', '127.0.0.1'].includes(location.hostname)) return [0, 0];
+            const query = new URLSearchParams(location.search);
+            const stage = parseInt(query.get('stage') || '0', 10);
+            return [stage > 0 ? stage : 0, query.get('auto') ? 1 : 0];
+        },
+
         language() {
             return (navigator.languages && navigator.languages[0]) || navigator.language || 'en';
         },
