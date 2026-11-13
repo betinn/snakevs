@@ -58,7 +58,7 @@ public sealed class Saw(Int2[] path, bool loop, int period, int offset)
     }
 }
 
-/// <summary>A beam from an emitter block to the first wall: off, a short warning, then on. Cells are stage-local.</summary>
+/// <summary>A beam from an emitter block to the first wall: off, a warning that charges up, then on. Cells are stage-local.</summary>
 public sealed class Laser(Int2 emitter, Direction direction, int period, int onTicks, int warnTicks, int delay)
 {
     public Int2 Emitter { get; } = emitter;
@@ -79,6 +79,33 @@ public sealed class Laser(Int2 emitter, Direction direction, int period, int onT
         c %= Period;
         if (c >= Period - OnTicks) return LaserState.On;
         return c >= Period - OnTicks - WarnTicks ? LaserState.Warning : LaserState.Off;
+    }
+
+    /// <summary>
+    /// How far the warning has run at a moment between two steps: 0 while the beam is dark or on, growing to 1 at the
+    /// step that turns it on. <paramref name="alpha"/> is the progress towards the next step, in [0, 1].
+    /// </summary>
+    public float ChargeAt(long tick, float alpha)
+    {
+        var c = tick - Delay;
+        if (c < 0) return 0f;
+        c %= Period;
+        var warnStart = Period - OnTicks - WarnTicks;
+        if (c < warnStart || c >= Period - OnTicks) return 0f;
+        return Math.Clamp((c - warnStart + alpha) / WarnTicks, 0f, 1f);
+    }
+
+    /// <summary>
+    /// How much of the firing time is left at a moment between two steps: 1 when the beam turns on, 0 at the step
+    /// that turns it off, 0 while it is not on.
+    /// </summary>
+    public float BurnLeftAt(long tick, float alpha)
+    {
+        var c = tick - Delay;
+        if (c < 0) return 0f;
+        c %= Period;
+        var onStart = Period - OnTicks;
+        return c < onStart ? 0f : Math.Clamp((Period - c - alpha) / OnTicks, 0f, 1f);
     }
 }
 
@@ -149,7 +176,7 @@ public sealed class PortalPost(Int2 cell)
 /// </summary>
 public sealed class Stage
 {
-    public const int Width = Rules.BoardWidth;
+    public const int Width = Rules.JourneyStageWidth;
     public const int Height = Rules.JourneyStageHeight;
     public const int GateWidth = Rules.JourneyGateWidth;
     public const int CellCount = Width * Height;

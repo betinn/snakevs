@@ -91,6 +91,11 @@ public abstract class RunScene : Scene
 
     protected virtual Color ReadyColor => Palette.Accent;
 
+    /// <summary>Cells the board window shows, across and down (the journey has its own, smaller room).</summary>
+    protected virtual int BoardColumns => Rules.BoardWidth;
+
+    protected virtual int BoardRows => Rules.BoardHeight;
+
     /// <summary>Second line under the score in the result panel (apples, level, stage...).</summary>
     protected abstract string ResultDetail { get; }
 
@@ -240,7 +245,7 @@ public abstract class RunScene : Scene
 
         var boardArea = new RectF(safe.X + 6, safe.Y + HudHeight + 6, safe.W - 12, safe.H - HudHeight - 12);
         // Fit centers the board in the area below the HUD, which also centers the HUD + board block.
-        View = BoardView.Fit(boardArea, Rules.BoardWidth, Rules.BoardHeight);
+        View = BoardView.Fit(boardArea, BoardColumns, BoardRows);
         Hud = new RectF(View.Area.X, View.Area.Y - HudHeight, View.Area.W, HudHeight - 12);
 
         if (UseButtons)
@@ -427,7 +432,7 @@ public abstract class RunScene : Scene
         {
             try
             {
-                _qualify = ranking.GetTopAsync(Mode, RunDifficulty, Leaderboard.DefaultTake);
+                _qualify = ranking.GetTopAsync(Mode, RunDifficulty, Leaderboard.TopSize);
             }
             catch (Exception)
             {
@@ -440,7 +445,7 @@ public abstract class RunScene : Scene
 
     /// <summary>A run enters the top when there is room or it beats the last one (ties keep the older entry first).</summary>
     private bool MakesTop(ScoreEntry[] top) =>
-        top.Length < Leaderboard.DefaultTake || Player.Score > top[^1].Score;
+        top.Length < Leaderboard.TopSize || Player.Score > top[^1].Score;
 
     private void Submit(ILeaderboard ranking, string name)
     {

@@ -42,6 +42,10 @@ public sealed class JourneyScene : RunScene
 
     protected override Color ReadyColor => Palette.Portal;
 
+    protected override int BoardColumns => Stage.Width;
+
+    protected override int BoardRows => Stage.Height;
+
     protected override string ResultDetail => $"{Game.Text.Stage} {_session.StageNumber}";
 
     protected override Vector2 ReadyHintAnchor => MapPoint(_session.Player.Head) + CameraOffset;

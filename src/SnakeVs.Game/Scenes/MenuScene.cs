@@ -6,7 +6,10 @@ using SnakeVs.Game.UI;
 
 namespace SnakeVs.Game.Scenes;
 
-/// <summary>Title screen. Two CPU snakes battle in the background as an attract mode.</summary>
+/// <summary>
+/// Title screen: the difficulty picker, one button per mode and the records for the difficulty picked. Two CPU snakes
+/// battle in the background as an attract mode.
+/// </summary>
 public sealed class MenuScene : Scene
 {
     private readonly ButtonList _buttons = new();
@@ -17,10 +20,14 @@ public sealed class MenuScene : Scene
     private readonly Button? _ranking;
     private readonly Button _options;
     private readonly Button _help;
+
+    /// <summary>The three segments of the difficulty picker, indexed by <see cref="Difficulty"/>. Drawn by this scene.</summary>
+    private readonly Button[] _difficulties = new Button[3];
     private GameSession _attract;
     private BoardView _attractView;
     private float _restartTimer;
     private float _titleY;
+    private float _pickerCaptionY;
     private float _footerY;
 
     public MenuScene(SnakeGame game) : base(game)
@@ -33,6 +40,9 @@ public sealed class MenuScene : Scene
         if (game.Platform.Leaderboard is not null) _ranking = _buttons.Add(new Button(t.Ranking) { Accent = Palette.Gold });
         _options = _buttons.Add(new Button(t.Options));
         _help = _buttons.Add(new Button(t.HowToPlay));
+        _difficulties[(int)Difficulty.Easy] = new Button(t.Easy);
+        _difficulties[(int)Difficulty.Normal] = new Button(t.Normal);
+        _difficulties[(int)Difficulty.Hard] = new Button(t.Hard);
         _attract = NewAttract();
     }
 
@@ -47,13 +57,23 @@ public sealed class MenuScene : Scene
         var gap = count > 6 ? 14f : 18f;
         var stack = height * count + gap * (count - 1);
         var titleBlock = 330f;
+        const float pickerCaption = 32f;
+        const float pickerHeight = 72f;
+        var pickerBlock = pickerCaption + pickerHeight + gap + 6f;
         var footer = 110f;
-        var free = safe.H - titleBlock - stack - footer;
+        var free = safe.H - titleBlock - pickerBlock - stack - footer;
         var top = safe.Y + MathF.Max(30f, free * 0.45f);
 
         _titleY = top + 120f;
-        _buttons.LayoutColumn(safe.Center.X, top + titleBlock, width, height, gap);
-        _footerY = MathF.Min(safe.Bottom - 70f, top + titleBlock + stack + 60f + MathF.Max(0f, free * 0.2f));
+        _pickerCaptionY = top + titleBlock + 12f;
+        var segment = width / 3f;
+        for (var i = 0; i < 3; i++)
+        {
+            _difficulties[i].Bounds = new RectF(safe.Center.X - width / 2f + i * segment, top + titleBlock + pickerCaption, segment, pickerHeight);
+        }
+
+        _buttons.LayoutColumn(safe.Center.X, top + titleBlock + pickerBlock, width, height, gap);
+        _footerY = MathF.Min(safe.Bottom - 70f, top + titleBlock + pickerBlock + stack + 60f + MathF.Max(0f, free * 0.2f));
     }
 
     public override void Update(float dt)
@@ -75,6 +95,25 @@ public sealed class MenuScene : Scene
         if (input.Back)
         {
             Game.Quit();
+            return;
+        }
+
+        // Difficulty: tap a segment, or left/right on the keyboard.
+        var current = (int)Game.Save.Difficulty;
+        var wanted = current;
+        if (input.KeyDirection == Direction.Left) wanted = Math.Max(0, current - 1);
+        else if (input.KeyDirection == Direction.Right) wanted = Math.Min(2, current + 1);
+        for (var i = 0; i < 3; i++)
+        {
+            if (_difficulties[i].WasClicked(input)) wanted = i;
+        }
+
+        if (wanted != current)
+        {
+            Game.Save.Difficulty = (Difficulty)wanted;
+            Game.PlaySound(Sfx.Click);
+            Game.Vibrate(8);
+            Game.Persist();
             return;
         }
 
@@ -110,6 +149,7 @@ public sealed class MenuScene : Scene
         var tagScale = Font.FitScale(Game.Text.Tagline, Safe.W - 60, 3f);
         Font.DrawCentered(c, Game.Text.Tagline, new Vector2(cx, _titleY + 180), tagScale, Palette.TextDim);
 
+        DrawDifficultyPicker(c);
         _buttons.Draw(c, Font, Game.Input, Time);
 
         var save = Game.Save;
@@ -118,11 +158,40 @@ public sealed class MenuScene : Scene
         var classicBest = save.GetBest(GameMode.Endless, save.Difficulty);
         var levelsBest = save.GetBest(GameMode.Levels, save.Difficulty);
         var line1 = $"{t.Journey} {journeyBest}  -  {t.Classic} {classicBest}  -  {t.Levels} {levelsBest}";
-        var line2 = $"VS CPU {t.WinsLosses} {save.VersusWins}/{save.VersusLosses}  -  {t.DifficultyName(save.Difficulty)}";
+        var line2 = $"VS CPU {t.WinsLosses} {save.VersusWins}/{save.VersusLosses}";
         Font.DrawCentered(c, line1, new Vector2(cx, _footerY), Font.FitScale(line1, Safe.W - 60, 3f), Palette.Gold);
         Font.DrawCentered(c, line2, new Vector2(cx, _footerY + 38), Font.FitScale(line2, Safe.W - 60, 2.5f), Palette.TextDim);
         Font.DrawCentered(c, "V" + SnakeGame.VersionName, new Vector2(Safe.Right - 60, Safe.Bottom - 24), 2f, Palette.TextDim * 0.7f, shadow: false);
     }
+
+    /// <summary>One track with three segments; the one in use is filled with its color (green, gold, red).</summary>
+    private void DrawDifficultyPicker(Canvas c)
+    {
+        var input = Game.Input;
+        var first = _difficulties[0].Bounds;
+        var track = new RectF(first.X, first.Y, first.W * 3f, first.H);
+        Font.DrawCentered(c, Game.Text.Difficulty, new Vector2(track.Center.X, _pickerCaptionY), 2.5f, Palette.TextDim);
+        c.FillRoundRect(track.Offset(0, 6), 20, Palette.TextShadow * 0.6f);
+        c.FillRoundRect(track, 20, Palette.Button);
+
+        for (var i = 0; i < 3; i++)
+        {
+            var button = _difficulties[i];
+            var selected = (int)Game.Save.Difficulty == i;
+            var r = button.Bounds.Inflate(button.IsPressed(input) ? -9 : -6);
+            if (selected) c.FillRoundRect(r, 15, DifficultyColor((Difficulty)i));
+            else if (button.IsPressed(input)) c.FillRoundRect(r, 15, Palette.ButtonPressed);
+            var scale = Font.FitScale(button.Label, r.W - 16, 3.5f);
+            Font.DrawCentered(c, button.Label, r.Center, scale, selected ? Palette.ButtonPrimaryText : Palette.TextDim, shadow: false);
+        }
+    }
+
+    private static Color DifficultyColor(Difficulty difficulty) => difficulty switch
+    {
+        Difficulty.Easy => Palette.PlayerHead,
+        Difficulty.Hard => Palette.Danger,
+        _ => Palette.Gold,
+    };
 
     private static GameSession NewAttract()
     {

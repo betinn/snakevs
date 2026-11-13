@@ -64,6 +64,7 @@ public sealed class JourneySession
     private readonly int _seed;
     private double _accumulatorMs;
     private int _rivalFade;
+    private long _lastAppleTick;
 
     public JourneySession(Difficulty difficulty, int seed, int startStage = 1)
     {
@@ -98,6 +99,9 @@ public sealed class JourneySession
     public long PreviousStageTick { get; private set; }
 
     public int ApplesThisStage { get; private set; }
+
+    /// <summary>Steps since the last apple of this stage was eaten (or since the snake came in).</summary>
+    public long TicksSinceApple => StageTick - _lastAppleTick;
 
     /// <summary>World cell of the apple, or null once the stage's apples are done.</summary>
     public Int2? Apple { get; private set; }
@@ -519,6 +523,7 @@ public sealed class JourneySession
             p.ApplesEaten++;
             p.Score += points;
             ApplesThisStage++;
+            _lastAppleTick = StageTick;
             Apple = null;
             _events.Add(new GameEvent(GameEventType.AteApple, head, p.Id, points));
 
@@ -600,6 +605,7 @@ public sealed class JourneySession
     {
         var stage = Current;
         StageTick = 0;
+        _lastAppleTick = 0;
         ApplesThisStage = 0;
         Apple = null;
         Golden = null;

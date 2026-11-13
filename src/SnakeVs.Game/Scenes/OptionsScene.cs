@@ -6,10 +6,10 @@ using SnakeVs.Game.UI;
 
 namespace SnakeVs.Game.Scenes;
 
+/// <summary>Sound, vibration and controls. The difficulty is picked on the title screen.</summary>
 public sealed class OptionsScene : Scene
 {
     private readonly ButtonList _buttons = new();
-    private readonly Button _difficulty;
     private readonly Button _sound;
     private readonly Button _vibration;
     private readonly Button _controls;
@@ -18,7 +18,6 @@ public sealed class OptionsScene : Scene
 
     public OptionsScene(SnakeGame game) : base(game)
     {
-        _difficulty = _buttons.Add(new Button(string.Empty));
         _sound = _buttons.Add(new Button(string.Empty));
         _vibration = _buttons.Add(new Button(string.Empty));
         _controls = _buttons.Add(new Button(string.Empty));
@@ -31,7 +30,7 @@ public sealed class OptionsScene : Scene
         var width = MathF.Min(600f, Safe.W - 60f);
         const float height = 100f;
         const float gap = 22f;
-        var stack = height * 5 + gap * 4 + 30;
+        var stack = height * 4 + gap * 3 + 30;
         var top = Safe.Y + MathF.Max(40f, (Safe.H - stack - 200f) / 2f);
         _titleY = top + 70;
         _buttons.LayoutColumn(Safe.Center.X, top + 180, width, height, gap);
@@ -57,8 +56,7 @@ public sealed class OptionsScene : Scene
             return;
         }
 
-        if (clicked == _difficulty) save.Difficulty = (Difficulty)(((int)save.Difficulty + 1) % 3);
-        else if (clicked == _sound) save.SoundOn = !save.SoundOn;
+        if (clicked == _sound) save.SoundOn = !save.SoundOn;
         else if (clicked == _vibration) save.VibrationOn = !save.VibrationOn;
         else if (clicked == _controls) save.Controls = save.Controls == ControlScheme.Swipe ? ControlScheme.Buttons : ControlScheme.Swipe;
 
@@ -80,13 +78,6 @@ public sealed class OptionsScene : Scene
     {
         var t = Game.Text;
         var s = Game.Save;
-        _difficulty.Label = $"{t.Difficulty}: {t.DifficultyName(s.Difficulty)}";
-        _difficulty.Accent = s.Difficulty switch
-        {
-            Difficulty.Easy => Palette.PlayerHead,
-            Difficulty.Hard => Palette.Danger,
-            _ => Palette.Gold,
-        };
         _sound.Label = $"{t.Sound}: {(s.SoundOn ? t.On : t.Off)}";
         _sound.Accent = s.SoundOn ? Palette.PlayerHead : Palette.TextDim;
         _vibration.Label = $"{t.Vibration}: {(s.VibrationOn ? t.On : t.Off)}";

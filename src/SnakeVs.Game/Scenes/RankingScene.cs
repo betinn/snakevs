@@ -16,7 +16,7 @@ namespace SnakeVs.Game.Scenes;
 /// </summary>
 public sealed class RankingScene : Scene
 {
-    private const int Rows = 10;
+    private const int Rows = Leaderboard.TopSize;
     private const float CountSeconds = 1.0f;
     private const float RankPopAt = 1.15f;
     private const float CardSeconds = 2.4f;
@@ -103,7 +103,7 @@ public sealed class RankingScene : Scene
 
         var listTop = tabsY + 72 + gap + 62 + 26;
         _list = new RectF(left, listTop, width, footerTop - 26 - listTop);
-        _rowHeight = MathF.Min(66f, (_list.H - 24f) / (Rows + 1.5f));
+        _rowHeight = MathF.Min(108f, (_list.H - 24f) / (Rows + 1.5f));
     }
 
     public override void Update(float dt)
@@ -411,7 +411,7 @@ public sealed class RankingScene : Scene
             if (flash > 0f) c.FillRoundRect(row.Inflate(4f * flash), 14, Color.White * (0.5f * flash));
         }
 
-        var scale = MathF.Min(4f, MathF.Floor(row.H / 11f * 2f) / 2f);
+        var scale = MathF.Min(5f, MathF.Floor(row.H / 11f * 2f) / 2f);
         var textY = MathF.Round(row.Center.Y - 3.5f * scale);
         var position = rank ?? e.Rank;
         var rankColor = position switch

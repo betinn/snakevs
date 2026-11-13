@@ -31,7 +31,7 @@ Journey mode:
 | Portal | `#5CE1E6` | Open portal, its arrows and posts, stage banner, journey titles |
 | Portal door / lock | `#5A3A52` / `#FF6B6B` | Closed portal in the top wall |
 | Rail / saw | `#2F3868` / `#D5DBF5` with `#FF4D5E` hub | Saw blades and the rails they run on |
-| Laser | `#FF3B6B` with `#FFE3EA` core | Beams (thin blinking line while warning) and emitter lenses |
+| Laser | `#FF3B6B` with `#FFE3EA` core | Beams and emitter lenses. Dark: one dot per cell on the line of fire. Warning: a charge runs from the emitter to the end of the line and the beam fires when it gets there. On: the beam thins out over its last step |
 | Phase block | `#7A5CFF` / `#A590FF` | Blocks that come and go (outline while gone) |
 | Lava | `#FF5A1F` / `#FFB02E` / `#B3260D` | Body / surface glow / depth |
 | Meteor | `#FF9F43` | Crosshairs, falling rock, impact |
@@ -41,7 +41,7 @@ Journey mode:
 | Specter | `#E8E6FF`, stunned `#5C8DFF` | Ghost enemy |
 | Darkness | `#04050C` | Blackout stages |
 
-Danger is always warm (red, orange, pink) and telegraphed before it can hurt: lasers blink, phase blocks flash,
+Danger is always warm (red, orange, pink) and telegraphed before it can hurt: lasers charge up, phase blocks flash,
 meteors show crosshairs, portal posts show an outline, creatures blink while they wake up.
 
 Power-up colors: Slow `#4FC3F7`, Ghost `#B388FF`, Double `#FFD23F`, Shrink `#FF9F43`, Shield `#5C8DFF`.
@@ -58,6 +58,7 @@ Power-up colors: Slow `#4FC3F7`, Ghost `#B388FF`, Double `#FFD23F`, Shrink `#FF9
 - Design box: 720 x 1280 units, always fully visible. The virtual screen grows along the longer axis,
   so there are never black bars (phones 16:9 to 21:9, tablets, landscape on large screens).
 - Board: 20 x 30 cells, cell size is a whole number of units. HUD (112 units) sits right above the board.
+  The journey shows one room of 16 x 24 cells in the same space, so its cells are about a quarter bigger.
 - Safe area: content respects display cutouts reported by the system.
 - Minimum touch target: 84 x 84 units (about 9 mm on a phone). Menu buttons are 96-100 units tall.
 - Primary action is always the green button at the top of a button stack.
