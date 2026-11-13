@@ -65,7 +65,9 @@ public sealed class Strings
     public required string Apples { get; init; }
     public required string ShieldSaved { get; init; }
     public required string Ranking { get; init; }
-    public required string SaveScore { get; init; }
+    public required string YourScore { get; init; }
+    public required string Position { get; init; }
+    public required string Of { get; init; }
     public required string Sending { get; init; }
     public required string SaveFailed { get; init; }
     public required string Loading { get; init; }
@@ -74,6 +76,8 @@ public sealed class Strings
     public required string Retry { get; init; }
 
     /// <summary>Name dialog (drawn by the platform, not the pixel font: mixed case allowed).</summary>
+    public required string NameTitle { get; init; }
+    public required string NamePoints { get; init; }
     public required string NamePrompt { get; init; }
     public required string NameSave { get; init; }
     public required string NameCancel { get; init; }
@@ -197,16 +201,20 @@ public sealed class Strings
         Apples = "MAÇÃS",
         ShieldSaved = "ESCUDO!",
         Ranking = "RANKING",
-        SaveScore = "SALVAR NO RANKING",
+        YourScore = "SUA PONTUAÇÃO",
+        Position = "POSIÇÃO",
+        Of = "DE",
         Sending = "ENVIANDO...",
         SaveFailed = "ERRO. TENTAR DE NOVO",
         Loading = "CARREGANDO...",
         RankingEmpty = "NINGUÉM AINDA. SEJA O PRIMEIRO!",
         RankingOffline = "RANKING INDISPONÍVEL",
         Retry = "TENTAR DE NOVO",
-        NamePrompt = "Seu nome ou apelido",
-        NameSave = "Salvar",
-        NameCancel = "Cancelar",
+        NameTitle = "Você entrou no top 10!",
+        NamePoints = "pontos",
+        NamePrompt = "Digite seu apelido",
+        NameSave = "OK",
+        NameCancel = "Pular",
         HelpBasics =
         [
             "DESLIZE O DEDO PARA VIRAR.",
@@ -319,16 +327,20 @@ public sealed class Strings
         Apples = "APPLES",
         ShieldSaved = "SHIELD!",
         Ranking = "RANKING",
-        SaveScore = "SAVE TO RANKING",
+        YourScore = "YOUR SCORE",
+        Position = "POSITION",
+        Of = "OF",
         Sending = "SENDING...",
         SaveFailed = "ERROR. TRY AGAIN",
         Loading = "LOADING...",
         RankingEmpty = "NO SCORES YET. BE THE FIRST!",
         RankingOffline = "RANKING UNAVAILABLE",
         Retry = "TRY AGAIN",
-        NamePrompt = "Your name or nickname",
-        NameSave = "Save",
-        NameCancel = "Cancel",
+        NameTitle = "You made the top 10!",
+        NamePoints = "points",
+        NamePrompt = "Type your nickname",
+        NameSave = "OK",
+        NameCancel = "Skip",
         HelpBasics =
         [
             "SWIPE TO TURN.",

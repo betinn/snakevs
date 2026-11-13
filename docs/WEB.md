@@ -19,7 +19,7 @@ CPU no total. O servidor ASP.NET que existia antes, com a mesma carga, foi de 65
 | Projeto | Papel na web |
 |---|---|
 | `SnakeVs.Core` | Regras, IA, níveis e save (os mesmos do Android) + contrato do ranking (`Leaderboard.cs`: DTOs, regra de apelido, checagem de pontuação, JSON). |
-| `SnakeVs.Game` | Telas, render, fonte, input e áudio: os mesmos arquivos do app. Ranking: `Online/ILeaderboard.cs`, `Scenes/RankingScene.cs` e o botão no fim da partida (`PlayScene`). Só aparece onde a plataforma oferece ranking. |
+| `SnakeVs.Game` | Telas, render, fonte, input e áudio: os mesmos arquivos do app. Ranking: `Online/ILeaderboard.cs`, `Scenes/RankingScene.cs` e, no fim da partida (`RunScene`), a caixa de apelido que abre sozinha quando a pontuação entra no top 10. Só aparece onde a plataforma oferece ranking. |
 | `SnakeVs.Web` | Host do navegador: `WebPlatform.cs`, `HttpLeaderboard.cs`, `wwwroot/index.html` e `wwwroot/js/snakevs.js`. |
 | `SnakeVs.Api` | Servidor do ranking em Rust: `src/rules.rs` (regras), `src/lib.rs` (rotas + SQLite), `src/main.rs` (HTTP mínimo), `deploy/` (nginx + systemd). |
 
@@ -39,10 +39,12 @@ CPU no total. O servidor ASP.NET que existia antes, com a mesma carga, foi de 65
 
 ## Ranking online
 
-- Fim de partida (Jornada, Clássico e Níveis, pontuação > 0): botão **Salvar no ranking** abre um diálogo HTML (teclado nativo
-  do celular) para o apelido. Depois de salvo, abre a tela de Ranking com a posição do jogador destacada (se não
-  entrou no top 10, aparece embaixo com a posição real). Se falhar (sem internet), o botão vira "tentar de novo"
-  e reenvia sem pedir o nome outra vez.
+- Fim de partida (Jornada, Clássico e Níveis, pontuação > 0): o jogo busca o top 10 atual. Se a pontuação entra (há
+  vaga ou supera o 10º; empate fica atrás do mais antigo), a caixa de apelido (HTML, teclado nativo do celular) abre
+  sozinha com o placar, já preenchida com o último apelido. **OK** salva e abre o Ranking com uma animação: cartão
+  contando os pontos e mostrando a posição, depois a linha do jogador sobe da base da lista até o lugar dela (toque
+  pula). **Pular** fecha sem salvar. Fora do top 10 ou sem internet, nada é pedido. Se o envio falhar, aparece o
+  botão "erro. tentar de novo", que reenvia sem pedir o nome outra vez.
 - Menu: botão **Ranking** com abas Jornada/Clássico/Níveis e Fácil/Normal/Difícil (top 10 de cada).
 - Na Jornada, o campo `level` do envio é a fase alcançada.
 - VS CPU não entra: o resultado é vitória/derrota, não pontuação.
@@ -163,7 +165,7 @@ o `X-Forwarded-For` que o limite por IP usa.
 - [ ] `./scripts/build-web.ps1` sem erros e workflow **ranking-api** verde.
 - [ ] `curl http://127.0.0.1:5090/api/health` na VM responde `ok`; `/etc/snakevs-api.env` com a chave de moderação.
 - [ ] Abrir o site no celular e no PC: menu, toque/clique, teclado e som após o primeiro toque.
-- [ ] Jogar uma partida, salvar no ranking com um apelido e ver a posição no Ranking.
+- [ ] Jogar uma partida que entre no top 10, digitar o apelido na caixa que abre sozinha e ver a animação no Ranking.
 - [ ] Jornada: atravessar um portal e ver o mapa rolar sem a cobra parar (o conteúdo da fase não pode vazar da moldura).
 - [ ] Atualizar o `snakevs-api` junto com o jogo: o servidor antigo não conhece o modo `journey` e recusa esses envios.
 - [ ] DevTools > Network: `dotnet.native.*.wasm` com `content-encoding: gzip` (ou `br`) e `content-type: application/wasm`.

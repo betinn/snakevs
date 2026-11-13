@@ -9,8 +9,11 @@ namespace SnakeVs.Game.Online;
 /// </summary>
 public interface ILeaderboard
 {
-    /// <summary>Asks the player for a name with the platform's own text input. Null when cancelled.</summary>
-    Task<string?> AskNameAsync(string? suggested, Strings text);
+    /// <summary>
+    /// Asks the player for a nickname with the platform's own text input, telling them the run of
+    /// <paramref name="score"/> points made the top. Null when skipped.
+    /// </summary>
+    Task<string?> AskNameAsync(string? suggested, int score, Strings text);
 
     Task<ScoreEntry[]> GetTopAsync(GameMode mode, Difficulty difficulty, int take);
 

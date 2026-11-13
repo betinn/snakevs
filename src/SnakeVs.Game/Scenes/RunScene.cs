@@ -24,12 +24,15 @@ public abstract class RunScene : Scene
     private readonly Button _pauseToMenu;
     private readonly Button _again;
     private readonly Button _resultToMenu;
-    private readonly Button _saveScore;
+    private readonly Button _retrySave;
     private readonly RectF[] _pad = new RectF[4];
     private RunPhase _phaseBeforePause;
     private RectF _panel;
 
-    // Online ranking: name dialog, then the upload. The name is kept so a failed upload retries without asking again.
+    // Online ranking: check whether the run made the top, then the nickname dialog (opened by itself), then the
+    // upload. The name is kept so a failed upload retries without asking again.
+    private Task<ScoreEntry[]>? _qualify;
+    private bool _nameDue;
     private Task<string?>? _askName;
     private Task<SubmitResult>? _submit;
     private string? _submitName;
@@ -47,7 +50,7 @@ public abstract class RunScene : Scene
         _pauseToMenu = _pauseMenu.Add(new Button(t.Menu));
         _again = _resultMenu.Add(new Button(mode == GameMode.Versus ? t.Rematch : t.PlayAgain, ButtonStyle.Primary));
         _resultToMenu = _resultMenu.Add(new Button(t.Menu));
-        _saveScore = new Button(t.SaveScore) { Accent = Palette.Gold };
+        _retrySave = new Button(t.SaveFailed) { Accent = Palette.Gold };
     }
 
     protected enum RunPhase
@@ -354,10 +357,10 @@ public abstract class RunScene : Scene
             case RunPhase.Result:
                 if (UpdateSaveScore()) break;
                 var pick = _resultMenu.Update(input);
-                if (pick == _saveScore)
+                if (pick == _retrySave)
                 {
                     Game.PlaySound(Sfx.Click);
-                    StartSaveScore();
+                    if (OnlineRanking is { } ranking && _submitName is not null && _submit is null) Submit(ranking, _submitName);
                 }
                 else if (pick == _again)
                 {
@@ -418,55 +421,80 @@ public abstract class RunScene : Scene
         RecordResult();
         Game.Persist();
 
-        // Online ranking: offer to save any scoring run of a ranked mode.
-        if (OnlineRanking is not null && Leaderboard.IsRanked(Mode) && Player.Score > 0)
+        // Online ranking: a scoring run of a ranked mode is checked against the current top; if it makes it, the
+        // nickname box opens by itself once the result panel is up.
+        if (OnlineRanking is { } ranking && Leaderboard.IsRanked(Mode) && Player.Score > 0)
         {
-            _resultMenu.Clear();
-            _resultMenu.Add(_saveScore);
-            _resultMenu.Add(_again);
-            _resultMenu.Add(_resultToMenu);
-            Layout();
+            try
+            {
+                _qualify = ranking.GetTopAsync(Mode, RunDifficulty, Leaderboard.DefaultTake);
+            }
+            catch (Exception)
+            {
+                _qualify = null; // offline: the run simply is not ranked
+            }
         }
 
         SetPhase(RunPhase.Result);
     }
 
-    private void StartSaveScore()
-    {
-        if (OnlineRanking is not { } ranking || _askName is not null || _submit is not null) return;
-        if (_submitName is not null)
-        {
-            Submit(ranking, _submitName);
-            return;
-        }
-
-        try
-        {
-            _askName = ranking.AskNameAsync(Game.Save.PlayerName, Game.Text);
-        }
-        catch (Exception)
-        {
-            _saveScore.Label = Game.Text.SaveFailed;
-        }
-    }
+    /// <summary>A run enters the top when there is room or it beats the last one (ties keep the older entry first).</summary>
+    private bool MakesTop(ScoreEntry[] top) =>
+        top.Length < Leaderboard.DefaultTake || Player.Score > top[^1].Score;
 
     private void Submit(ILeaderboard ranking, string name)
     {
-        _saveScore.Label = Game.Text.Sending;
+        ShowRetry(false);
         try
         {
             _submit = ranking.SubmitAsync(BuildSubmission(name));
         }
         catch (Exception)
         {
-            _saveScore.Label = Game.Text.SaveFailed;
+            ShowRetry(true);
         }
     }
 
-    /// <summary>Follows the name dialog and the upload. Returns true while the name dialog is open (input belongs to it).</summary>
+    /// <summary>Adds or removes the "error, try again" button above the result buttons.</summary>
+    private void ShowRetry(bool show)
+    {
+        if (show == _resultMenu.Buttons.Contains(_retrySave)) return;
+        _resultMenu.Clear();
+        if (show) _resultMenu.Add(_retrySave);
+        _resultMenu.Add(_again);
+        _resultMenu.Add(_resultToMenu);
+        Layout();
+    }
+
+    /// <summary>
+    /// Follows the top check, the nickname dialog and the upload. Returns true while the dialog is open (input
+    /// belongs to it).
+    /// </summary>
     private bool UpdateSaveScore()
     {
         if (OnlineRanking is not { } ranking) return false;
+
+        if (_qualify is { IsCompleted: true } qualify)
+        {
+            _qualify = null;
+            if (qualify.IsCompletedSuccessfully) _nameDue = MakesTop(qualify.Result);
+            else _ = qualify.Exception; // observed: offline, the run is just not ranked
+        }
+
+        // Let the result panel pop in first, so the player sees the score before typing.
+        if (_nameDue && PhaseTime >= 0.7f)
+        {
+            _nameDue = false;
+            try
+            {
+                Game.PlaySound(Sfx.Golden);
+                _askName = ranking.AskNameAsync(Game.Save.PlayerName, Player.Score, Game.Text);
+            }
+            catch (Exception)
+            {
+                _askName = null;
+            }
+        }
 
         if (_askName is { } ask)
         {
@@ -492,12 +520,12 @@ public abstract class RunScene : Scene
                 var sent = BuildSubmission(_submitName!);
                 var mine = new ScoreEntry(r.Id, r.Rank, sent.Name, sent.Score, sent.Apples, sent.Level, DateTime.UtcNow);
                 Game.PlaySound(Sfx.LevelUp);
-                Game.SetScene(new RankingScene(Game, ranking, Mode, RunDifficulty, mine, replayMode: Mode));
+                Game.SetScene(new RankingScene(Game, ranking, Mode, RunDifficulty, mine, r.Total, replayMode: Mode));
             }
             else
             {
                 _ = submit.Exception; // observed: shown to the player as a retry button
-                _saveScore.Label = Game.Text.SaveFailed;
+                ShowRetry(true);
             }
         }
 
@@ -653,6 +681,14 @@ public abstract class RunScene : Scene
         }
 
         var detail = $"{ResultDetail}  -  {t.DifficultyName(RunDifficulty)}";
-        Font.DrawCentered(c, detail, new Vector2(cx, top + 330), Font.FitScale(detail, width - 60, 2.5f), Palette.TextDim);
+        if (_submit is not null)
+        {
+            var pulse = 0.6f + 0.4f * MathF.Sin(Time * 6f);
+            Font.DrawCentered(c, t.Sending, new Vector2(cx, top + 330), 3f, Palette.Accent, alpha: pulse);
+        }
+        else
+        {
+            Font.DrawCentered(c, detail, new Vector2(cx, top + 330), Font.FitScale(detail, width - 60, 2.5f), Palette.TextDim);
+        }
     }
 }

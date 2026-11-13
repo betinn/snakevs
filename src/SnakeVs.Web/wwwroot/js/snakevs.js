@@ -57,12 +57,14 @@
     const NAME_REJECT = /[^A-Z0-9ÁÀÂÃÉÊÍÓÔÕÚÜÇÑ .\-_]/g;
     let closeNameDialog = null;
 
-    function askName(initial, label, saveText, cancelText, maxLength) {
+    function askName(initial, title, points, label, saveText, cancelText, maxLength) {
         if (closeNameDialog) closeNameDialog(null);
         const dialog = document.getElementById('name-dialog');
         const input = document.getElementById('name-input');
         const save = document.getElementById('name-save');
         const cancel = document.getElementById('name-cancel');
+        document.getElementById('name-title').textContent = title;
+        document.getElementById('name-points').textContent = points;
         document.getElementById('name-label').textContent = label;
         save.textContent = saveText;
         cancel.textContent = cancelText;
@@ -79,6 +81,7 @@
             const onSubmit = (e) => {
                 e.preventDefault();
                 if (!save.disabled) closeNameDialog(input.value.trim());
+                else input.focus();
             };
             const onCancel = () => closeNameDialog(null);
             const onKey = (e) => {

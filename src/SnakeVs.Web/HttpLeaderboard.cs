@@ -11,8 +11,16 @@ internal sealed class HttpLeaderboard(HttpClient http, IJSRuntime js) : ILeaderb
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(12);
 
-    public async Task<string?> AskNameAsync(string? suggested, Strings text) =>
-        await js.InvokeAsync<string?>("snakevs.askName", suggested ?? string.Empty, text.NamePrompt, text.NameSave, text.NameCancel, Leaderboard.NameMaxLength);
+    public async Task<string?> AskNameAsync(string? suggested, int score, Strings text) =>
+        await js.InvokeAsync<string?>(
+            "snakevs.askName",
+            suggested ?? string.Empty,
+            text.NameTitle,
+            $"{score} {text.NamePoints}",
+            text.NamePrompt,
+            text.NameSave,
+            text.NameCancel,
+            Leaderboard.NameMaxLength);
 
     public async Task<ScoreEntry[]> GetTopAsync(GameMode mode, Difficulty difficulty, int take)
     {
