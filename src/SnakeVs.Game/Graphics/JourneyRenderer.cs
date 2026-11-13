@@ -56,7 +56,7 @@ public static class JourneyRenderer
         if (stage.Dark) DrawDarkness(c, s, stage, world, time);
 
         // Things that give off light are drawn over the darkness.
-        DrawLasers(c, stage, world, tick, time, 1f);
+        DrawLasers(c, stage, world, tick, alpha, time, 1f);
         DrawMeteors(c, stage, world, tick, alpha, time);
         DrawSpecter(c, s, world, alpha, time);
         if (stage.Dark) DrawLightsInTheDark(c, s, stage, world, tick, alpha, time);
@@ -310,38 +310,57 @@ public static class JourneyRenderer
         return before.IsAdjacentTo(now) ? Vector2.Lerp(new Vector2(before.X, before.Y), to, alpha) : to;
     }
 
-    private static void DrawLasers(Canvas c, Stage stage, BoardView world, long tick, float time, float opacity)
+    /// <summary>
+    /// A beam can always be read before it can hurt: dark, a dotted line shows where it will pass; warning, a
+    /// charge runs along that line from the emitter and the beam fires when it reaches the end; on, the beam
+    /// thins out as its time runs down.
+    /// </summary>
+    private static void DrawLasers(Canvas c, Stage stage, BoardView world, long tick, float alpha, float time, float opacity)
     {
         var cell = world.Cell;
         foreach (var laser in stage.Lasers)
         {
             var state = laser.StateAt(tick);
+            var charge = laser.ChargeAt(tick, alpha);
             var emitter = world.CellCenter(stage.ToWorld(laser.Emitter));
             var forward = BoardRenderer.DirVec(laser.Direction);
             var lens = emitter + forward * (cell * 0.3f);
+            var blink = 0.5f + 0.5f * MathF.Sin(time * (14f + 26f * charge));
             var lit = state switch
             {
                 LaserState.On => 1f,
-                LaserState.Warning => 0.5f + 0.5f * MathF.Sin(time * 30f),
+                LaserState.Warning => 0.35f + 0.65f * MathF.Max(charge, blink),
                 _ => 0.25f,
             };
-            c.FillCircle(lens, cell * 0.17f, Color.Lerp(Palette.Emitter, Palette.Laser, lit) * opacity);
+            c.FillCircle(lens, cell * (0.17f + 0.07f * charge), Color.Lerp(Palette.Emitter, Palette.Laser, lit) * opacity);
 
-            if (state == LaserState.Off || laser.Beam.Count == 0) continue;
+            if (laser.Beam.Count == 0) continue;
             var from = emitter + forward * (cell * 0.5f);
             var to = world.CellCenter(stage.ToWorld(laser.Beam[^1])) + forward * (cell * 0.5f);
-            if (state == LaserState.Warning)
+
+            if (state != LaserState.On)
             {
-                var blink = 0.25f + 0.35f * (0.5f + 0.5f * MathF.Sin(time * 30f));
-                c.Line(from, to, MathF.Max(2f, cell * 0.08f), Palette.Laser * (blink * opacity));
+                // The line of fire, one dot per cell.
+                var dot = MathF.Max(1.5f, cell * 0.07f);
+                var dim = state == LaserState.Warning ? 0.55f : 0.4f;
+                foreach (var local in laser.Beam) c.FillCircle(world.CellCenter(stage.ToWorld(local)), dot, Palette.Laser * (dim * opacity));
+                if (state == LaserState.Off) continue;
+
+                var tip = Vector2.Lerp(from, to, charge);
+                c.Line(from, to, MathF.Max(2f, cell * 0.06f), Palette.Laser * ((0.2f + 0.3f * blink) * opacity));
+                c.Line(from, tip, cell * (0.1f + 0.12f * charge), Palette.Laser * ((0.55f + 0.35f * blink) * opacity));
+                c.DrawGlow(tip, cell * 0.7f, Palette.Laser * (0.55f * opacity));
+                c.FillCircle(tip, cell * 0.16f, Palette.LaserCore * opacity);
                 continue;
             }
 
+            // Full width for most of the burn, thinner over its last step and a half.
+            var body = MathHelper.Clamp(laser.BurnLeftAt(tick, alpha) * laser.OnTicks / 1.5f, 0.35f, 1f);
             var flicker = 0.85f + 0.15f * MathF.Sin(time * 60f);
-            c.Line(from, to, cell * 0.8f, Palette.Laser * (0.2f * opacity));
-            c.Line(from, to, cell * 0.4f * flicker, Palette.Laser * opacity);
-            c.Line(from, to, cell * 0.14f, Palette.LaserCore * opacity);
-            c.DrawGlow(to, cell * 0.9f, Palette.Laser * (0.6f * opacity));
+            c.Line(from, to, cell * 0.8f * body, Palette.Laser * (0.2f * opacity));
+            c.Line(from, to, cell * 0.4f * flicker * body, Palette.Laser * opacity);
+            c.Line(from, to, cell * 0.14f * body, Palette.LaserCore * opacity);
+            c.DrawGlow(to, cell * 0.9f * body, Palette.Laser * (0.6f * opacity));
         }
     }
 

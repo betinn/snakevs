@@ -19,7 +19,7 @@ CPU no total. O servidor ASP.NET que existia antes, com a mesma carga, foi de 65
 | Projeto | Papel na web |
 |---|---|
 | `SnakeVs.Core` | Regras, IA, níveis e save (os mesmos do Android) + contrato do ranking (`Leaderboard.cs`: DTOs, regra de apelido, checagem de pontuação, JSON). |
-| `SnakeVs.Game` | Telas, render, fonte, input e áudio: os mesmos arquivos do app. Ranking: `Online/ILeaderboard.cs`, `Scenes/RankingScene.cs` e, no fim da partida (`RunScene`), a caixa de apelido que abre sozinha quando a pontuação entra no top 10. Só aparece onde a plataforma oferece ranking. |
+| `SnakeVs.Game` | Telas, render, fonte, input e áudio: os mesmos arquivos do app. Ranking: `Online/ILeaderboard.cs`, `Scenes/RankingScene.cs` e, no fim da partida (`RunScene`), a caixa de apelido que abre sozinha quando a pontuação entra no top 5. Só aparece onde a plataforma oferece ranking. |
 | `SnakeVs.Web` | Host do navegador: `WebPlatform.cs`, `HttpLeaderboard.cs`, `wwwroot/index.html` e `wwwroot/js/snakevs.js`. |
 | `SnakeVs.Api` | Servidor do ranking em Rust: `src/rules.rs` (regras), `src/lib.rs` (rotas + SQLite), `src/main.rs` (HTTP mínimo), `deploy/` (nginx + systemd). |
 
@@ -39,13 +39,13 @@ CPU no total. O servidor ASP.NET que existia antes, com a mesma carga, foi de 65
 
 ## Ranking online
 
-- Fim de partida (Jornada, Clássico e Níveis, pontuação > 0): o jogo busca o top 10 atual. Se a pontuação entra (há
+- Fim de partida (Jornada, Clássico e Níveis, pontuação > 0): o jogo busca o top 5 atual. Se a pontuação entra (há
   vaga ou supera o 10º; empate fica atrás do mais antigo), a caixa de apelido (HTML, teclado nativo do celular) abre
   sozinha com o placar, já preenchida com o último apelido. **OK** salva e abre o Ranking com uma animação: cartão
   contando os pontos e mostrando a posição, depois a linha do jogador sobe da base da lista até o lugar dela (toque
-  pula). **Pular** fecha sem salvar. Fora do top 10 ou sem internet, nada é pedido. Se o envio falhar, aparece o
+  pula). **Pular** fecha sem salvar. Fora do top 5 ou sem internet, nada é pedido. Se o envio falhar, aparece o
   botão "erro. tentar de novo", que reenvia sem pedir o nome outra vez.
-- Menu: botão **Ranking** com abas Jornada/Clássico/Níveis e Fácil/Normal/Difícil (top 10 de cada).
+- Menu: botão **Ranking** com abas Jornada/Clássico/Níveis e Fácil/Normal/Difícil (top 5 de cada).
 - Na Jornada, o campo `level` do envio é a fase alcançada.
 - VS CPU não entra: o resultado é vitória/derrota, não pontuação.
 - Apelido: até 12 caracteres, maiúsculas, letras (com acentos do português, Ñ e Ü), números, espaço, `.`, `-`, `_`
@@ -144,7 +144,7 @@ Para compilar na sua máquina: `rustup target add x86_64-unknown-linux-musl`, `p
 
 Atualizar:
 
-- **Jogo**: substitua os arquivos de `/var/www/snakevs`.
+- **Jogo**: substitua os arquivos de `/var/www/snakevs`. Com a esteira (abaixo), isso é automático.
 - **Ranking**: `sudo install -m 755 snakevs-api /usr/local/bin/ && sudo systemctl restart snakevs-api`.
 - O banco não é tocado em nenhum dos dois casos.
 
@@ -153,6 +153,21 @@ Logs: `journalctl -u snakevs-api`. Backup a quente (`sudo apt install sqlite3`):
 Se a VM usa **Apache** em vez de nginx: sirva `/var/www/snakevs` (o `.htaccess` incluído cuida de tipos, `.gz`/`.br` e
 cache) e adicione `ProxyPass "/api/" "http://127.0.0.1:5090/api/"` (`a2enmod proxy proxy_http`); o Apache já acrescenta
 o `X-Forwarded-For` que o limite por IP usa.
+
+### Esteira de deploy (GitHub Actions)
+
+O workflow **deploy** (`.github/workflows/deploy.yml`) publica o jogo quando um PR de um branch `deploy/…` entra no
+`main`. PR de qualquer outro branch não publica nada.
+
+- Gera o site com `dotnet publish` no `ubuntu-24.04` (o mesmo resultado do `build-web.ps1` sem `-ApiUrl`), grava
+  `VERSAO` com o commit e o número do PR e manda o `wwwroot` compactado por SSH. Não roda testes: eles rodam antes,
+  no PR.
+- Endereço, chave e impressão digital do servidor ficam nos secrets `VM_HOST`, `VM_SSH_KEY` e `VM_KNOWN_HOSTS`.
+  Nada disso entra no repositório.
+- No servidor, a chave só consegue entregar o pacote. A pasta do site é trocada de uma vez; se a página nova não
+  responder, a anterior volta e o workflow fica vermelho.
+- `https://<site>/VERSAO` diz o que está no ar.
+- O ranking (`snakevs-api`) fica de fora: continua pelo workflow **ranking-api** e pela instalação acima.
 
 ### Sem ranking ou em host estático
 
@@ -165,7 +180,7 @@ o `X-Forwarded-For` que o limite por IP usa.
 - [ ] `./scripts/build-web.ps1` sem erros e workflow **ranking-api** verde.
 - [ ] `curl http://127.0.0.1:5090/api/health` na VM responde `ok`; `/etc/snakevs-api.env` com a chave de moderação.
 - [ ] Abrir o site no celular e no PC: menu, toque/clique, teclado e som após o primeiro toque.
-- [ ] Jogar uma partida que entre no top 10, digitar o apelido na caixa que abre sozinha e ver a animação no Ranking.
+- [ ] Jogar uma partida que entre no top 5, digitar o apelido na caixa que abre sozinha e ver a animação no Ranking.
 - [ ] Jornada: atravessar um portal e ver o mapa rolar sem a cobra parar (o conteúdo da fase não pode vazar da moldura).
 - [ ] Atualizar o `snakevs-api` junto com o jogo: o servidor antigo não conhece o modo `journey` e recusa esses envios.
 - [ ] DevTools > Network: `dotnet.native.*.wasm` com `content-encoding: gzip` (ou `br`) e `content-type: application/wasm`.

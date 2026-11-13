@@ -74,8 +74,14 @@ public static class Rules
     public const int PowerUpScore = 5;
     public const int LevelBonus = 100;
 
+    /// <summary>
+    /// Columns of a journey stage. Smaller than the classic board: the room is crossed in a couple of seconds and the
+    /// cells are drawn bigger, so hazards are easier to read.
+    /// </summary>
+    public const int JourneyStageWidth = 16;
+
     /// <summary>Rows of a journey stage, counting the wall row at its top where the portal opens.</summary>
-    public const int JourneyStageHeight = 30;
+    public const int JourneyStageHeight = 24;
     public const int JourneyGateWidth = 4;
     public const int JourneyMaxApplesPerStage = 6;
     public const int JourneyStageBonus = 50;
@@ -119,12 +125,16 @@ public static class Rules
         Math.Max(Math.Min(JourneyMinStepMs, BaseStepMs(difficulty)), BaseStepMs(difficulty) - (stage - 1) * JourneySpeedupMs);
 
     /// <summary>Apples that open the portal of a journey stage (stage numbers start at 1).</summary>
+    /// <remarks>
+    /// The introduction is quick on purpose: two apples while the first elements show up, three for the rest of it.
+    /// The mixes start at four and go up one apple every eight stages.
+    /// </remarks>
     public static int JourneyAppleGoal(int stage) => stage switch
     {
         <= 1 => 1,
-        <= 6 => 3,
-        <= 14 => 4,
-        _ => Math.Min(JourneyMaxApplesPerStage, 4 + (stage - 15) / 6),
+        <= 5 => 2,
+        <= 14 => 3,
+        _ => Math.Min(JourneyMaxApplesPerStage, 4 + (stage - 15) / 8),
     };
 
     public static int AppleValue(int level) => AppleScore + (level - 1) * AppleScorePerLevel;

@@ -14,10 +14,11 @@ Snake em fases contínuas (Jornada), clássico sem fim, níveis e duelo contra a
 - **VS CPU**: duelo contra uma cobra da CPU (busca em largura + flood fill para não se encurralar). Ganha quem chegar a 15 maçãs ou sobreviver.
 - **Poderes**: Lento, Fantasma (atravessa tudo), Pontos x2, Tesoura (corta a cauda), Escudo (salva de uma batida) e Maçã dourada (+50).
 - **Controles**: deslizar (padrão) ou botões na tela; teclado/gamepad no desktop e no navegador.
-- **Opções**: dificuldade (Fácil/Normal/Difícil), som, vibração, tipo de controle. Recordes salvos no aparelho.
+- **Dificuldade**: Fácil/Normal/Difícil, escolhida na tela inicial (os recordes mostrados ali são os dela).
+- **Opções**: som, vibração, tipo de controle. Recordes salvos no aparelho.
 - **Idiomas**: Português (Brasil) e Inglês, escolhidos pelo idioma do sistema.
 - **Ranking online (só web)**: ao fim de cada partida da Jornada, do Clássico ou de Níveis, salvar a pontuação com nome/apelido;
-  top 10 por modo e dificuldade, guardado em SQLite por um servidor Rust de poucos MB.
+  top 5 por modo e dificuldade, guardado em SQLite por um servidor Rust de poucos MB.
 
 ## Jornada
 
@@ -29,7 +30,7 @@ Tudo anda no compasso dos passos da cobra, então o poder Lento desacelera os pe
 | 1 | Largada | Uma maçã só, embaixo: descer, comer, subir pelo portal. |
 | 2 | Blocos | Paredes fixas (barras, pilares, zigue-zague, cantos). |
 | 3 | Serras | Lâminas que correm em trilhos, indo e voltando ou em circuito. |
-| 4 | Lasers | Raios que atravessam a fase: apagado, aviso piscando, ligado. |
+| 4 | Lasers | Raios que cortam parte da linha: apagado, aviso carregando, ligado. Sempre sobra um vão para contornar. |
 | 5 | Besouros | Andam pela fase, mordem a cabeça e desviam do corpo. |
 | 6 | Pisca-pisca | Blocos (ou barreiras inteiras) que somem e voltam em turnos. |
 | 7 | Lava | Sobe do fundo, linha por linha, até um limite marcado. |
@@ -42,12 +43,36 @@ Tudo anda no compasso dos passos da cobra, então o poder Lento desacelera os pe
 | 14 | Torre laser | Bloco central com quatro raios que disparam em rodízio. |
 | 15+ | Misturas | Dois elementos por fase (três a cada cinco fases, "CAOS"), cada vez mais intensos. |
 
+- Cada fase é uma sala de 16 x 24 casas (menor que o tabuleiro 20 x 30 dos outros modos, com casas maiores na tela).
+- Maçãs para abrir o portal: 1 na fase 1, 2 nas fases 2 a 5, 3 até a fase 14, depois 4 e mais uma a cada 8 fases (até 6).
 - Ao abrir o portal, dois postes nascem ao lado dele (nunca em cima nem bem na frente da cobra).
 - Não há volta: o portal atravessado fecha e os perigos da fase que ficou para trás se desligam.
 - Pontos: maçã `10 + 2 x (fase - 1)`, bônus de `50 x fase` ao atravessar o portal, `50` pela rival derrubada.
 - Velocidade: 2 ms mais rápido por fase, até o piso de 80 ms por passo.
 - As fases saem de uma semente (`StageGenerator`): entrada e saída sempre livres, todo espaço alcançável e nenhuma
   maçã em beco sem saída (os testes conferem isso em milhares de fases).
+
+### Números dos lasers
+
+Tudo anda em passos, e a cobra anda uma casa por passo: "6 passos de aviso" quer dizer que o raio é visto carregando
+a 6 casas de distância. No Normal um passo dura 130 ms na fase 1 e 124 ms na fase 4.
+
+| Nível | Fases | Raios | Ciclo | Apagado | Aviso | Ligado | Alcance | Vão |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 4, 15-18 | 2 | 24 | 13 | 6 | 5 | 9 | 5 |
+| 2 | 19-22 | 3 | 24 | 13 | 6 | 5 | 10 | 4 |
+| 3 | 23-26 | 3 | 22 | 12 | 5 | 5 | 11 | 3 |
+| 4 | 27-30 | 3 | 22 | 12 | 5 | 5 | 12 | 2 |
+| 5 | 31+ | 3 | 20 | 10 | 5 | 5 | 12 | 2 |
+
+- O raio nunca fecha a linha inteira: para num bloco e deixa um vão do outro lado, em lados alternados. Esperar o
+  raio apagar é o caminho curto, nunca o único.
+- Apagado + aviso (o tempo em que dá para entrar) é pelo menos três vezes o tempo ligado.
+- Na fase 4 os raios disparam juntos; depois, em dois tempos (meio ciclo de diferença). Nunca um ritmo por raio.
+- Linhas com raio ficam pelo menos 4 casas uma da outra, e a linha de tiro é chão liso: sem maçã, gelo, teleporte
+  ou bloco pisca-pisca em cima.
+- Na tela: apagado, a linha de tiro aparece pontilhada; no aviso, uma carga corre do emissor até o fim da linha e o
+  raio dispara quando ela chega; ligado, o raio afina no último passo.
 
 ## Estrutura
 

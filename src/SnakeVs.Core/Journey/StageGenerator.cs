@@ -153,11 +153,25 @@ internal sealed class StageBuilder
             if (Walls[i]) Ice[i] = false;
         }
 
+        // A teleporter is never iced over: the snake must be able to steer the moment it comes out of one.
+        foreach (var (a, z) in Teleports)
+        {
+            Ice[Stage.IndexOf(a)] = false;
+            Ice[Stage.IndexOf(z)] = false;
+        }
+
         foreach (var laser in Lasers)
         {
             var beam = new List<Int2>();
             var step = laser.Direction.ToOffset();
-            for (var c = laser.Emitter + step; Stage.InPlay(c) && !Walls[Stage.IndexOf(c)]; c += step) beam.Add(c);
+            for (var c = laser.Emitter + step; Stage.InPlay(c) && !Walls[Stage.IndexOf(c)]; c += step)
+            {
+                beam.Add(c);
+
+                // An apple on a beam would have to be fetched by riding along it: pickups stay off the line of fire.
+                NoItems[Stage.IndexOf(c)] = true;
+            }
+
             laser.Beam = beam;
         }
 
@@ -217,17 +231,36 @@ internal sealed class StageBuilder
 
     /// <summary>
     /// The snake cannot turn on ice, so a pickup on ice is only fair when a straight line through it comes from open
-    /// ground and leaves to open ground. Ice cells without such a line get no pickups.
+    /// ground and leaves to open ground. Ice cells without such a line get no pickups. A rail, a block that comes
+    /// and goes or a teleporter is not open ground: a slide that starts or ends on one depends on the clock, or
+    /// carries on somewhere else.
     /// </summary>
     private void MarkTrappedIce()
     {
+        var timed = new bool[Stage.CellCount];
+        foreach (var (a, z) in Teleports)
+        {
+            timed[Stage.IndexOf(a)] = true;
+            timed[Stage.IndexOf(z)] = true;
+        }
+
+        foreach (var group in PhaseGroups)
+        {
+            foreach (var c in group.Cells) timed[Stage.IndexOf(c)] = true;
+        }
+
+        foreach (var saw in Saws)
+        {
+            foreach (var c in saw.Path) timed[Stage.IndexOf(c)] = true;
+        }
+
         bool Leaves(Int2 from, Direction d)
         {
             var step = d.ToOffset();
             for (var c = from + step; ; c += step)
             {
                 if (!Stage.InPlay(c) || Walls[Stage.IndexOf(c)]) return false;
-                if (!Ice[Stage.IndexOf(c)]) return true;
+                if (!Ice[Stage.IndexOf(c)]) return !timed[Stage.IndexOf(c)];
             }
         }
 
@@ -264,6 +297,11 @@ public static class StageGenerator
     private const int H = Stage.Height;
     private const int MaxAttempts = 24;
     private const int MaxLevel = 5;
+
+    // The room is 16 x 24. Rows 1 to 4 are the approach to the portal, rows FirstRow to LastRow are where layouts and
+    // hazards go, and the rows below are where the snake comes in.
+    private const int FirstRow = 5;
+    private const int LastRow = H - 6;
 
     /// <summary>Order in which the elements are introduced, one per stage.</summary>
     public static readonly StageElement[] Intro =
@@ -344,7 +382,7 @@ public static class StageGenerator
         {
             case StageElement.Start:
                 // One apple, low on the map: the run opens by going down, then up through the portal.
-                b.FixedApple = new Int2(Math.Clamp(W / 2 + rng.Next(-6, 7), 1, W - 2), H - 4);
+                b.FixedApple = new Int2(Math.Clamp(W / 2 + rng.Next(-5, 6), 1, W - 2), H - 4);
                 break;
 
             case StageElement.Blocks:
@@ -360,12 +398,12 @@ public static class StageGenerator
 
             case StageElement.Saws:
                 AddSaws(b, rng, 1);
-                LayoutScatter(b, rng, 4);
+                LayoutScatter(b, rng, 3);
                 break;
 
             case StageElement.Lasers:
                 AddLasers(b, rng, 1);
-                LayoutScatter(b, rng, 3);
+                LayoutScatter(b, rng, 2);
                 break;
 
             case StageElement.Bugs:
@@ -379,7 +417,7 @@ public static class StageGenerator
 
             case StageElement.Lava:
                 AddLava(b, 1);
-                LayoutScatter(b, rng, 4, maxRow: b.ItemMaxRow);
+                LayoutScatter(b, rng, 3, maxRow: b.ItemMaxRow);
                 break;
 
             case StageElement.Teleports:
@@ -402,7 +440,7 @@ public static class StageGenerator
                 break;
 
             case StageElement.Meteors:
-                LayoutScatter(b, rng, 4);
+                LayoutScatter(b, rng, 3);
                 AddMeteors(b, rng, 1);
                 break;
 
@@ -449,7 +487,7 @@ public static class StageGenerator
         if (Has(StageElement.Lasers)) AddLasers(b, rng, level);
         if (Has(StageElement.Phase)) AddPhase(b, rng, level);
         if (Has(StageElement.Ice)) AddIce(b, rng, level);
-        LayoutScatter(b, rng, 2 + rng.Next(3), maxRow: b.ItemMaxRow);
+        LayoutScatter(b, rng, 1 + rng.Next(3), maxRow: b.ItemMaxRow);
         if (Has(StageElement.Teleports)) AddTeleportShortcuts(b, rng);
         if (Has(StageElement.Bugs)) AddBugs(b, rng, level);
         if (Has(StageElement.Specter)) AddSpecter(b, level);
@@ -462,10 +500,10 @@ public static class StageGenerator
 
     private static void LayoutBars(StageBuilder b, Random rng)
     {
-        foreach (var y in new[] { 7, 13, 19 })
+        foreach (var y in new[] { 6, 11, 16 })
         {
-            var gap = rng.Next(5, 13);
-            for (var x = 3; x <= W - 4; x++)
+            var gap = rng.Next(3, W - 6);
+            for (var x = 2; x <= W - 3; x++)
             {
                 if (x >= gap && x < gap + 3) continue;
                 b.TryWall(x, y);
@@ -475,9 +513,9 @@ public static class StageGenerator
 
     private static void LayoutPillars(StageBuilder b)
     {
-        foreach (var px in new[] { 3, 9, 15 })
+        foreach (var px in new[] { 2, 7, 12 })
         {
-            foreach (var py in new[] { 6, 11, 16, 20 })
+            foreach (var py in new[] { 5, 9, 13, 17 })
             {
                 b.TryWall(px, py);
                 b.TryWall(px + 1, py);
@@ -491,10 +529,10 @@ public static class StageGenerator
     {
         var flip = rng.Next(2) == 0;
         var row = 0;
-        foreach (var y in new[] { 7, 13, 19 })
+        foreach (var y in new[] { 6, 11, 16 })
         {
             var fromLeft = (row++ % 2 == 0) != flip;
-            for (var i = 0; i < 14; i++) b.TryWall(fromLeft ? i : W - 1 - i, y);
+            for (var i = 0; i < W - 5; i++) b.TryWall(fromLeft ? i : W - 1 - i, y);
         }
     }
 
@@ -502,19 +540,19 @@ public static class StageGenerator
     {
         void Corner(int x, int y, int dx, int dy)
         {
-            for (var i = 0; i < 5; i++) b.TryWall(x + i * dx, y);
-            for (var i = 1; i < 5; i++) b.TryWall(x, y + i * dy);
+            for (var i = 0; i < 4; i++) b.TryWall(x + i * dx, y);
+            for (var i = 1; i < 4; i++) b.TryWall(x, y + i * dy);
         }
 
-        Corner(3, 6, 1, 1);
-        Corner(W - 4, 6, -1, 1);
-        Corner(3, 20, 1, -1);
-        Corner(W - 4, 20, -1, -1);
+        Corner(2, FirstRow, 1, 1);
+        Corner(W - 3, FirstRow, -1, 1);
+        Corner(2, LastRow, 1, -1);
+        Corner(W - 3, LastRow, -1, -1);
     }
 
     private static void LayoutScatter(StageBuilder b, Random rng, int pieces, int maxRow = H - 1)
     {
-        var bottom = Math.Min(20, maxRow);
+        var bottom = Math.Min(LastRow, maxRow);
         for (var p = 0; p < pieces; p++)
         {
             var (pw, ph) = rng.Next(5) switch
@@ -529,7 +567,7 @@ public static class StageGenerator
             for (var attempt = 0; attempt < 8; attempt++)
             {
                 var x = rng.Next(1, W - pw);
-                var y = rng.Next(5, Math.Max(6, bottom - ph + 2));
+                var y = rng.Next(FirstRow, Math.Max(FirstRow + 1, bottom - ph + 2));
                 var fits = true;
                 for (var i = 0; i < pw && fits; i++)
                 {
@@ -548,23 +586,29 @@ public static class StageGenerator
     }
 
     // ---- Elements ----
+    //
+    // Everything follows the clock of the snake: it moves one cell per step, so a number of steps is also a distance.
+    // "5 steps of warning" means the player sees the danger coming from 5 cells away.
 
+    /// <summary>
+    /// Blades on rails. Two at first, at half the speed of the snake; the fast ones only show up at level 3.
+    /// </summary>
     private static void AddSaws(StageBuilder b, Random rng, int level)
     {
-        var rows = new List<int> { 6, 9, 12, 15, 18, 21 };
+        var rows = new List<int> { 5, 8, 11, 14, 17, 20 };
         rows.RemoveAll(y => y > b.ItemMaxRow);
         Shuffle(rows, rng);
-        var wanted = Math.Min(4, 2 + level);
+        var wanted = Math.Min(4, 1 + level);
         var placed = 0;
         foreach (var y in rows)
         {
             if (placed >= wanted) break;
             var run = LongestFreeRun(b, y);
-            if (run.Length < 6) continue;
+            if (run.Length < 5) continue;
             var (x0, length) = run;
-            if (length > 12 && rng.Next(2) == 0)
+            if (length > 10 && rng.Next(2) == 0)
             {
-                var shorter = rng.Next(8, 13);
+                var shorter = rng.Next(6, 11);
                 x0 += rng.Next(length - shorter + 1);
                 length = shorter;
             }
@@ -576,10 +620,10 @@ public static class StageGenerator
                 b.Claim(path[i]);
             }
 
-            var period = level >= 3 ? 1 : level == 2 && placed % 2 == 0 ? 1 : 2;
+            var period = level >= 4 ? 1 : level == 3 && placed % 2 == 0 ? 1 : 2;
             var offset = rng.Next(2 * (length - 1));
             b.Saws.Add(new Saw(path, loop: false, period, offset));
-            if (level >= 4 && length >= 12) b.Saws.Add(new Saw(path, loop: false, period, offset + length - 1));
+            if (level >= 5 && length >= 10) b.Saws.Add(new Saw(path, loop: false, period, offset + length - 1));
             placed++;
         }
 
@@ -591,7 +635,7 @@ public static class StageGenerator
             var w = rng.Next(5, 8);
             var h = rng.Next(4, 7);
             var x0 = rng.Next(1, W - w);
-            var y0 = rng.Next(5, Math.Max(6, Math.Min(20, b.ItemMaxRow) - h + 1));
+            var y0 = rng.Next(FirstRow, Math.Max(FirstRow + 1, Math.Min(LastRow, b.ItemMaxRow) - h + 1));
             var ring = new List<Int2>();
             for (var x = x0; x < x0 + w; x++) ring.Add(new Int2(x, y0));
             for (var y = y0 + 1; y < y0 + h; y++) ring.Add(new Int2(x0 + w - 1, y));
@@ -599,54 +643,118 @@ public static class StageGenerator
             for (var y = y0 + h - 2; y > y0; y--) ring.Add(new Int2(x0, y));
             if (!ring.All(b.Free)) continue;
             foreach (var c in ring) b.Claim(c);
-            b.Saws.Add(new Saw([.. ring], loop: true, level >= 3 ? 1 : 2, rng.Next(ring.Count)));
+            b.Saws.Add(new Saw([.. ring], loop: true, level >= 4 ? 1 : 2, rng.Next(ring.Count)));
             break;
         }
     }
 
+    /// <summary>
+    /// Beams across part of a row, from an emitter on the side wall to a block that stops them.
+    /// <list type="bullet">
+    /// <item>A beam never spans the row: past the block there is a gap of 5 cells (2 at the hardest) to go around,
+    /// on alternating sides. Waiting for the beam is the short way, never the only one.</item>
+    /// <item>The warning lasts 6 steps (5 later on): a snake heading for the beam sees it charge from that far away
+    /// and still has room to turn.</item>
+    /// <item>Dark plus warning, the time it is safe to go in, is 15 steps or more; the beam is on for 5. A snake
+    /// of up to 15 segments gets across a dark beam whole.</item>
+    /// <item>The beams fire on one beat in the introduction and on two (half a cycle apart) after that: one rhythm
+    /// to learn, not one per beam.</item>
+    /// <item>Two beams in the introduction, three after it, on rows at least 4 apart: there is always room to turn
+    /// between two of them. Later levels get harder through longer beams and a shorter cycle, not through more beams.</item>
+    /// </list>
+    /// </summary>
     private static void AddLasers(StageBuilder b, Random rng, int level)
     {
-        var rows = new List<int> { 5, 7, 9, 11, 13, 15, 17, 19, 21 };
-        rows.RemoveAll(y => y > b.ItemMaxRow);
+        // Rows with nothing on them yet (no rail, no reserved zone): a beam takes its row whole.
+        var rows = new List<int>();
+        for (var y = FirstRow; y <= Math.Min(LastRow - 1, b.ItemMaxRow); y++)
+        {
+            if (Enumerable.Range(0, W).All(x => b.Free(new Int2(x, y)))) rows.Add(y);
+        }
+
         Shuffle(rows, rng);
-        var wanted = Math.Min(6, 2 + level);
-        var chosen = rows.Take(wanted).Order().ToList();
-        var period = Math.Max(14, 20 - level * 2);
+        var wanted = level == 1 ? 2 : 3;
+        var chosen = new List<int>();
+        foreach (var y in rows)
+        {
+            if (chosen.Count >= wanted) break;
+            if (chosen.All(other => Math.Abs(other - y) >= LaserRowSpacing)) chosen.Add(y);
+        }
+
+        chosen.Sort();
+
+        var period = LaserPeriod(level);
+        var warn = level <= 2 ? 6 : 5;
+        var reach = Math.Min(W - 4, W - 8 + level);
+        var fromLeft = rng.Next(2) == 0;
         var placed = 0;
         foreach (var y in chosen)
         {
-            var fromLeft = placed % 2 == 0;
+            if (!TryBeam(b, y, fromLeft, reach)) continue;
             var emitter = new Int2(fromLeft ? 0 : W - 1, y);
-            if (!b.Free(emitter))
-            {
-                fromLeft = !fromLeft;
-                emitter = new Int2(fromLeft ? 0 : W - 1, y);
-                if (!b.Free(emitter)) continue;
-            }
-
-            b.TryWall(emitter.X, emitter.Y);
-            b.Lasers.Add(new Laser(emitter, fromLeft ? Direction.Right : Direction.Left, period, onTicks: 5, warnTicks: 3, delay: 8 + placed * 3));
+            var beat = level >= 2 && placed % 2 == 1 ? period / 2 : 0;
+            b.Lasers.Add(new Laser(emitter, fromLeft ? Direction.Right : Direction.Left, period, LaserOnTicks, warn, delay: 8 + beat));
+            fromLeft = !fromLeft;
             placed++;
         }
     }
 
-    /// <summary>A block in the middle whose four beams fire one after the other, like a turning lighthouse.</summary>
+    public const int LaserOnTicks = 5;
+    public const int LaserRowSpacing = 4;
+
+    /// <summary>Steps of a full laser cycle: 24 at first, 20 at the hardest.</summary>
+    public static int LaserPeriod(int level) => 24 - 2 * ((Math.Clamp(level, 1, MaxLevel) - 1) / 2);
+
+    /// <summary>
+    /// Puts an emitter on the side wall of a row and the block that stops its beam. The whole row is then taken: the
+    /// line of fire stays plain floor (no ice, no teleporter, nothing that comes and goes on it) and the cells past
+    /// the block stay open. False when the row has no room for it.
+    /// </summary>
+    private static bool TryBeam(StageBuilder b, int y, bool fromLeft, int reach)
+    {
+        var emitter = new Int2(fromLeft ? 0 : W - 1, y);
+        var step = fromLeft ? 1 : -1;
+        for (var x = 0; x < W; x++)
+        {
+            if (!b.Free(new Int2(x, y))) return false;
+        }
+
+        var stop = new Int2(emitter.X + step * (reach + 1), y);
+        b.TryWall(emitter.X, emitter.Y);
+        b.TryWall(stop.X, stop.Y);
+        for (var x = 0; x < W; x++)
+        {
+            var c = new Int2(x, y);
+            if (c != emitter && c != stop) b.Claim(c);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// A block in the middle whose four beams fire one after the other, like a turning lighthouse. Each beam warns
+    /// for 5 steps while the one before it is still on, and two steps of darkness separate one beam from the next.
+    /// </summary>
     private static void AddTurret(StageBuilder b, Random rng, int level)
     {
         for (var attempt = 0; attempt < 10; attempt++)
         {
             var cx = W / 2 - 1 + rng.Next(-2, 3);
-            var cy = rng.Next(9, Math.Max(10, Math.Min(16, b.ItemMaxRow - 3)));
+            var cy = rng.Next(8, Math.Max(9, Math.Min(13, b.ItemMaxRow - 3)));
             Int2[] block = [new(cx, cy), new(cx + 1, cy), new(cx + 1, cy + 1), new(cx, cy + 1)];
             if (!block.All(b.Free)) continue;
             foreach (var c in block) b.TryWall(c.X, c.Y);
 
-            var period = Math.Max(16, 26 - level * 2);
+            var period = Math.Max(20, 30 - level * 2);
             var quarter = period / 4;
             Direction[] directions = [Direction.Left, Direction.Up, Direction.Right, Direction.Down];
             for (var i = 0; i < 4; i++)
             {
-                b.Lasers.Add(new Laser(block[i], directions[i], period, onTicks: quarter - 1, warnTicks: 3, delay: 8 + i * quarter));
+                b.Lasers.Add(new Laser(block[i], directions[i], period, onTicks: quarter - 2, warnTicks: 5, delay: 8 + i * quarter));
+
+                // The line of fire stays plain floor, like the beams of the side emitters.
+                var step = directions[i].ToOffset();
+                for (var c = block[i] + step; Stage.InPlay(c); c += step) b.Claim(c);
             }
 
             return;
@@ -655,8 +763,8 @@ public static class StageGenerator
 
     private static void AddBugs(StageBuilder b, Random rng, int level)
     {
-        var wanted = Math.Min(6, 2 + level);
-        var maxRow = Math.Min(H - 12, b.ItemMaxRow);
+        var wanted = Math.Min(5, 1 + level);
+        var maxRow = Math.Min(H - 10, b.ItemMaxRow);
         for (var attempt = 0; attempt < 200 && b.BugSpawns.Count < wanted; attempt++)
         {
             var c = new Int2(rng.Next(W), rng.Next(3, maxRow + 1));
@@ -667,17 +775,18 @@ public static class StageGenerator
         b.BugEvery = 2;
     }
 
+    /// <summary>Blocks that come and go: 12 steps solid, 12 gone at first, with 5 steps of warning before they return.</summary>
     private static void AddPhase(StageBuilder b, Random rng, int level)
     {
-        var period = Math.Max(14, 24 - level * 2);
+        var period = Math.Max(16, 26 - level * 2);
         var groups = new[] { new List<Int2>(), new List<Int2>() };
 
         if (rng.Next(2) == 0)
         {
             // Checkerboard of 2x2 blocks: half of them solid at any time.
             var shift = rng.Next(2);
-            var xs = new[] { 2 + shift, 6 + shift, 10 + shift, 14 + shift };
-            var ys = new[] { 6, 10, 14, 18 };
+            var xs = new[] { 1 + shift, 5 + shift, 9 + shift, 13 + shift };
+            var ys = new[] { 5, 9, 13, 17 };
             for (var i = 0; i < xs.Length; i++)
             {
                 for (var j = 0; j < ys.Length; j++)
@@ -693,7 +802,7 @@ public static class StageGenerator
         {
             // Barriers across the whole stage that take turns closing.
             var row = 0;
-            foreach (var y in new[] { 8, 13, 18 })
+            foreach (var y in new[] { 7, 11, 15 })
             {
                 if (y > b.ItemMaxRow) continue;
                 var group = groups[row++ % 2];
@@ -710,14 +819,15 @@ public static class StageGenerator
         for (var g = 0; g < 2; g++)
         {
             if (groups[g].Count == 0) continue;
-            b.PhaseGroups.Add(new PhaseGroup([.. groups[g]], period, period / 2, warnTicks: 3, offset: g == 0 ? 0 : period / 2));
+            b.PhaseGroups.Add(new PhaseGroup([.. groups[g]], period, period / 2, warnTicks: 5, offset: g == 0 ? 0 : period / 2));
         }
     }
 
+    /// <summary>Lava floods the lower 9 rows at first (13 at most) and leaves the rest of the room dry.</summary>
     private static void AddLava(StageBuilder b, int level)
     {
-        var maxRows = Math.Min(17, 11 + level * 2);
-        b.Lava = new LavaTide(Delay: 22, TicksPerRow: Math.Max(3, 7 - level), maxRows);
+        var maxRows = Math.Min(13, 8 + level);
+        b.Lava = new LavaTide(Delay: 20, TicksPerRow: Math.Max(3, 7 - level), maxRows);
         b.ItemMaxRow = H - maxRows - 2;
     }
 
@@ -726,37 +836,39 @@ public static class StageGenerator
     {
         for (var x = 0; x < W; x++)
         {
-            b.TryWall(x, 13);
-            b.TryWall(x, 14);
+            b.TryWall(x, 11);
+            b.TryWall(x, 12);
         }
 
-        var lowY = 19 + rng.Next(-1, 2);
-        var highY = 8 + rng.Next(-1, 2);
-        var left = 3 + rng.Next(0, 2);
-        var right = W - 4 - rng.Next(0, 2);
+        var lowY = 15 + rng.Next(-1, 2);
+        var highY = 7 + rng.Next(-1, 2);
+        var left = 2 + rng.Next(0, 2);
+        var right = W - 3 - rng.Next(0, 2);
         AddTeleport(b, new Int2(left, lowY), new Int2(right, highY));
         AddTeleport(b, new Int2(right, lowY), new Int2(left, highY));
 
-        foreach (var (x, y) in new[] { (9, 6), (10, 6), (9, 20), (10, 20) }) b.TryWall(x, y);
+        foreach (var (x, y) in new[] { (W / 2 - 1, 5), (W / 2, 5), (W / 2 - 1, 18), (W / 2, 18) }) b.TryWall(x, y);
     }
 
     private static void AddTeleportShortcuts(StageBuilder b, Random rng)
     {
-        var maxRow = Math.Min(20, b.ItemMaxRow - 1);
+        var maxRow = Math.Min(LastRow, b.ItemMaxRow - 1);
         for (var pair = 0; pair < 2; pair++)
         {
             for (var attempt = 0; attempt < 60; attempt++)
             {
-                var a = new Int2(rng.Next(1, W - 1), rng.Next(5, maxRow + 1));
-                var z = new Int2(rng.Next(1, W - 1), rng.Next(5, maxRow + 1));
-                if (a.ManhattanTo(z) < 12 || !Roomy(b, a) || !Roomy(b, z)) continue;
+                var a = new Int2(rng.Next(1, W - 1), rng.Next(FirstRow, maxRow + 1));
+                var z = new Int2(rng.Next(1, W - 1), rng.Next(FirstRow, maxRow + 1));
+                if (a.ManhattanTo(z) < 10 || !Roomy(b, a) || !Roomy(b, z)) continue;
                 AddTeleport(b, a, z);
                 break;
             }
         }
     }
 
-    private static bool Roomy(StageBuilder b, Int2 c) => b.Free(c) && Directions.All.All(d => b.Free(c + d.ToOffset()));
+    /// <summary>A free cell of plain floor (a teleporter on ice would throw the snake out sliding) with free cells around it.</summary>
+    private static bool Roomy(StageBuilder b, Int2 c) =>
+        b.Free(c) && !b.Ice[Stage.IndexOf(c)] && Directions.All.All(d => b.Free(c + d.ToOffset()));
 
     private static void AddTeleport(StageBuilder b, Int2 a, Int2 z)
     {
@@ -780,21 +892,21 @@ public static class StageGenerator
 
     private static void AddIce(StageBuilder b, Random rng, int level)
     {
-        var bottom = Math.Min(19, b.ItemMaxRow);
+        var bottom = Math.Min(LastRow - 1, b.ItemMaxRow);
         if (level <= 1)
         {
             // One big rink with a few rocks to slide into.
-            FillIce(b, 2, 6, W - 3, bottom);
-            for (var rock = 0; rock < 4; rock++) b.TryWall(rng.Next(4, W - 4), rng.Next(8, bottom - 1));
+            FillIce(b, 2, FirstRow, W - 3, bottom);
+            for (var rock = 0; rock < 3; rock++) b.TryWall(rng.Next(3, W - 3), rng.Next(FirstRow + 2, Math.Max(FirstRow + 3, bottom - 1)));
             return;
         }
 
         for (var patch = 0; patch < 2; patch++)
         {
-            var w = rng.Next(6, 11);
-            var h = rng.Next(4, 8);
+            var w = rng.Next(5, 9);
+            var h = rng.Next(4, 7);
             var x0 = rng.Next(1, W - w);
-            var y0 = rng.Next(5, Math.Max(6, bottom - h + 2));
+            var y0 = rng.Next(FirstRow, Math.Max(FirstRow + 1, bottom - h + 2));
             FillIce(b, x0, y0, x0 + w - 1, Math.Min(bottom, y0 + h - 1));
         }
     }
@@ -811,15 +923,16 @@ public static class StageGenerator
         }
     }
 
+    /// <summary>One strike every 5 steps at first, every 3 at most, each announced 8 steps ahead.</summary>
     private static void AddMeteors(StageBuilder b, Random rng, int level) =>
-        b.Meteors = new MeteorShower(rng.Next(), Start: 16, Interval: Math.Max(2, 5 - level), WarnTicks: 7);
+        b.Meteors = new MeteorShower(rng.Next(), Start: 16, Interval: Math.Max(3, 6 - level), WarnTicks: 8);
 
     private static void AddRival(StageBuilder b)
     {
         var fromRight = b.GateX < W / 2;
         var heading = fromRight ? Direction.Left : Direction.Right;
         var back = heading.Opposite().ToOffset();
-        for (var y = 5; y <= 11; y++)
+        for (var y = FirstRow; y <= 11; y++)
         {
             var head = new Int2(fromRight ? W - 6 : 5, y);
             var clear = true;

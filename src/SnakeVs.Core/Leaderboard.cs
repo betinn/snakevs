@@ -20,6 +20,14 @@ public sealed record SubmitResult(long Id, int Rank, int Total);
 public static class Leaderboard
 {
     public const int NameMaxLength = 12;
+
+    /// <summary>
+    /// Size of the top the game shows, and the one a run has to enter for the nickname box to open. The game always
+    /// asks the server for this many.
+    /// </summary>
+    public const int TopSize = 5;
+
+    /// <summary>Entries the server sends when a request does not say how many (part of the server contract).</summary>
     public const int DefaultTake = 10;
     public const int MaxTake = 50;
 

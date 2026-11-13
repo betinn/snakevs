@@ -13,11 +13,21 @@ public static class JourneyAi
     /// <summary>How many steps ahead hazards are predicted. Further than that the search assumes the cell is clear.</summary>
     private const int Horizon = 48;
 
+    /// <summary>Steps without an apple after which the autopilot starts taking odd turns, to get out of a loop.</summary>
+    private const int RestlessAfter = 160;
+
     [ThreadStatic] private static HazardKind[][]? _ahead;
     [ThreadStatic] private static bool[]? _aheadReady;
     [ThreadStatic] private static int[]? _freeAt;
     [ThreadStatic] private static int[]? _dangerUntil;
-    [ThreadStatic] private static bool[]? _seen;
+    /// <summary>
+    /// Arrival times the search keeps for one cell and heading. More than one, because the first way to get somewhere
+    /// may come too soon: a beam still on, a block still solid, the snake's own tail still in the way.
+    /// </summary>
+    private const int Arrivals = 6;
+
+    [ThreadStatic] private static byte[]? _arrivals;
+    [ThreadStatic] private static int[]? _arrivedAt;
     [ThreadStatic] private static bool[]? _flood;
 
     /// <summary>Direction the autopilot wants for the player's next step.</summary>
@@ -107,11 +117,32 @@ public static class JourneyAi
 
         var apple = s.Apple is { } a ? stage.ToLocal(a) : (Int2?)null;
         var toGate = apple is null && stage.GateOpen;
+
+        // A specter sitting on the apple cannot be raced to it, and circling the two of them never ends. Walk away
+        // instead: it follows, and being slower than the snake it is left behind on the way back.
+        if (apple is { } guarded && s.Specter is { Stunned: false } guardian && !s.CreaturesDormant)
+        {
+            var guard = stage.ToLocal(guardian.Cell).ManhattanTo(guarded);
+            var arrival = (head.ManhattanTo(guarded) + stage.SpecterEvery - 1) / stage.SpecterEvery;
+            if (guard <= 2 && guard <= arrival) apple = FarFrom(stage, guarded);
+        }
+
         bool IsGoal(Int2 c) => apple is not null ? c == apple : toGate && c.Y == 0;
 
-        // Breadth first over (cell, heading): the heading matters because of the no-reverse rule and of ice.
-        var seen = _seen ??= new bool[Stage.CellCount * 4];
-        Array.Clear(seen);
+        // Breadth first over (cell, heading): the heading matters because of the no-reverse rule and of ice. A state
+        // is taken again when it is reached later, a few times over: that is how the search waits for something.
+        var arrivals = _arrivals ??= new byte[Stage.CellCount * 4];
+        var arrivedAt = _arrivedAt ??= new int[Stage.CellCount * 4];
+        Array.Clear(arrivals);
+        Array.Clear(arrivedAt);
+        bool Visit(int key, int depth)
+        {
+            if (arrivedAt[key] == depth || arrivals[key] >= Arrivals) return false;
+            arrivedAt[key] = depth;
+            arrivals[key]++;
+            return true;
+        }
+
         var queue = new Queue<(Int2 Cell, Direction Heading, Direction First, int Depth)>();
         Direction? path = null;
         foreach (var (d, cell) in candidates)
@@ -122,10 +153,7 @@ public static class JourneyAi
                 break;
             }
 
-            var key = Stage.IndexOf(cell) * 4 + (int)d;
-            if (seen[key]) continue;
-            seen[key] = true;
-            queue.Enqueue((cell, d, d, 1));
+            if (Visit(Stage.IndexOf(cell) * 4 + (int)d, 1)) queue.Enqueue((cell, d, d, 1));
         }
 
         while (path is null && queue.Count > 0)
@@ -143,10 +171,7 @@ public static class JourneyAi
                     break;
                 }
 
-                var key = Stage.IndexOf(n) * 4 + (int)d;
-                if (seen[key]) continue;
-                seen[key] = true;
-                queue.Enqueue((n, d, first, depth + 1));
+                if (Visit(Stage.IndexOf(n) * 4 + (int)d, depth + 1)) queue.Enqueue((n, d, first, depth + 1));
             }
         }
 
@@ -177,7 +202,27 @@ public static class JourneyAi
             if (a1 > b1 || (a1 == b1 && candidates[i].Cell.ManhattanTo(target) < candidates[pick].Cell.ManhattanTo(target))) pick = i;
         }
 
+        // No way to the apple for a long while: the same choice every time can be a loop (a snake following its own
+        // tail around what it wants). One step in three, take any other move that leaves as much room.
+        if (s.TicksSinceApple > RestlessAfter)
+        {
+            var roll = Scramble(s.StepCount);
+            if (roll % 3 == 0)
+            {
+                var other = (int)(roll / 3 % (uint)candidates.Count);
+                if (Math.Min(rooms[other], needed) >= Math.Min(rooms[pick], needed)) pick = other;
+            }
+        }
+
         return candidates[pick].Direction;
+    }
+
+    private static uint Scramble(long n)
+    {
+        var h = unchecked((uint)n * 2654435761u);
+        h ^= h >> 15;
+        h = unchecked(h * 2246822519u);
+        return h ^ (h >> 13);
     }
 
     /// <summary>Direction for the rival snake of a stage: shortest way to the apple that does not box it in.</summary>
@@ -284,6 +329,24 @@ public static class JourneyAi
         }
 
         return candidates[pick].Direction;
+    }
+
+    /// <summary>The open cell, out of one near each corner of the dry part of the stage, that is farthest from <paramref name="from"/>.</summary>
+    private static Int2 FarFrom(Stage stage, Int2 from)
+    {
+        var low = Math.Max(3, Math.Min(H - 3, stage.ItemMaxRow));
+        Span<Int2> corners = [new(2, 3), new(W - 3, 3), new(2, low), new(W - 3, low)];
+        var best = corners[0];
+        var bestDistance = -1;
+        foreach (var corner in corners)
+        {
+            var distance = corner.ManhattanTo(from);
+            if (stage.IsWall(corner) || distance <= bestDistance) continue;
+            best = corner;
+            bestDistance = distance;
+        }
+
+        return best;
     }
 
     /// <summary>Counts playfield cells reachable from <paramref name="start"/>, stopping early at <paramref name="limit"/>.</summary>

@@ -151,11 +151,32 @@ public class JourneyTests
         Assert.True(s.Current.GateOpen);
         Assert.False(post.Solid);
 
-        s.Player.Reset(new Int2(2, 25), Direction.Right, 3);
+        s.Player.Reset(new Int2(2, H - 4), Direction.Right, 3);
         s.Step();
 
         Assert.All(s.Current.Posts, p => Assert.True(p.Solid));
         Assert.True(s.Current.IsWall(post.Cell));
+    }
+
+    [Fact]
+    public void TheIntroduction_IsQuick_AndLaterStagesAskForMore()
+    {
+        Assert.Equal(1, Rules.JourneyAppleGoal(1));
+        for (var stage = 2; stage <= StageGenerator.IntroStages; stage++)
+        {
+            Assert.InRange(Rules.JourneyAppleGoal(stage), 2, 3);
+            Assert.True(Rules.JourneyAppleGoal(stage) >= Rules.JourneyAppleGoal(stage - 1));
+        }
+
+        // The stage that brings in the lasers is still one of the short ones.
+        Assert.Equal(2, Rules.JourneyAppleGoal(Array.IndexOf(StageGenerator.Intro, StageElement.Lasers) + 1));
+        for (var stage = StageGenerator.IntroStages + 1; stage < 300; stage++)
+        {
+            Assert.InRange(Rules.JourneyAppleGoal(stage), 4, Rules.JourneyMaxApplesPerStage);
+            Assert.True(Rules.JourneyAppleGoal(stage) >= Rules.JourneyAppleGoal(stage - 1));
+        }
+
+        Assert.Equal(Rules.JourneyMaxApplesPerStage, Rules.JourneyAppleGoal(300));
     }
 
     [Fact]
@@ -235,18 +256,40 @@ public class JourneyTests
         var s = Custom(b =>
         {
             b.TryWall(0, 10);
-            b.TryWall(8, 10);
+            b.TryWall(5, 10);
             b.Lasers.Add(new Laser(new Int2(0, 10), Direction.Right, period: 10, onTicks: 3, warnTicks: 2, delay: 4));
         });
         var laser = s.Current.Lasers[0];
 
-        Assert.Equal(7, laser.Beam.Count);
-        Assert.Equal(new Int2(7, 10), laser.Beam[^1]);
+        Assert.Equal(4, laser.Beam.Count);
+        Assert.Equal(new Int2(4, 10), laser.Beam[^1]);
         var states = Enumerable.Range(0, 15).Select(t => laser.StateAt(t)).ToArray();
         Assert.All(states.Take(9), st => Assert.Equal(LaserState.Off, st));        // delay 4 + off 5
         Assert.Equal([LaserState.Warning, LaserState.Warning], states[9..11]);
         Assert.Equal([LaserState.On, LaserState.On, LaserState.On], states[11..14]);
         Assert.Equal(LaserState.Off, states[14]);
+    }
+
+    [Fact]
+    public void Laser_ChargesThroughTheWarning_AndBurnsDown()
+    {
+        // Period 10: dark on ticks 0-4, warning on 5-6, on for 7-9.
+        var laser = new Laser(new Int2(0, 10), Direction.Right, period: 10, onTicks: 3, warnTicks: 2, delay: 0);
+
+        Assert.Equal(0f, laser.ChargeAt(4, 0.9f));
+        Assert.Equal(0f, laser.ChargeAt(5, 0f));
+        Assert.Equal(0.5f, laser.ChargeAt(6, 0f), 3);
+        Assert.Equal(1f, laser.ChargeAt(6, 1f), 3);  // the very moment it fires
+        Assert.Equal(0f, laser.ChargeAt(7, 0f));
+
+        Assert.Equal(0f, laser.BurnLeftAt(6, 0.5f));
+        Assert.Equal(1f, laser.BurnLeftAt(7, 0f), 3);
+        Assert.Equal(0f, laser.BurnLeftAt(9, 1f), 3);  // the step after this one is safe
+        for (var t = 0; t < 40; t++)
+        {
+            Assert.Equal(laser.StateAt(t) == LaserState.Warning, laser.ChargeAt(t, 0.5f) > 0f);
+            Assert.Equal(laser.StateAt(t) == LaserState.On, laser.BurnLeftAt(t, 0.5f) > 0f);
+        }
     }
 
     [Fact]
@@ -335,7 +378,7 @@ public class JourneyTests
             seen.Add(target);
         }
 
-        Assert.True(seen.Count > 400, "Strikes should spread over the stage.");
+        Assert.True(seen.Count > W * (H - 1) * 2 / 3, "Strikes should spread over the stage.");
     }
 
     [Fact]
@@ -400,17 +443,17 @@ public class JourneyTests
         var s = Custom(b =>
         {
             b.Claim(new Int2(6, 20));
-            b.Claim(new Int2(15, 8));
-            b.Teleports.Add((new Int2(6, 20), new Int2(15, 8)));
+            b.Claim(new Int2(12, 8));
+            b.Teleports.Add((new Int2(6, 20), new Int2(12, 8)));
         });
         s.Player.Reset(new Int2(5, 20), Direction.Right, 3);
 
         s.Step();
-        Assert.Equal(new Int2(15, 8), s.Player.Head);
+        Assert.Equal(new Int2(12, 8), s.Player.Head);
         Assert.Contains(s.Events, e => e.Type == GameEventType.Teleported);
 
         s.Step();
-        Assert.Equal(new Int2(16, 8), s.Player.Head);
+        Assert.Equal(new Int2(13, 8), s.Player.Head);
         Assert.True(s.Player.Alive);
     }
 
@@ -432,17 +475,17 @@ public class JourneyTests
     {
         var s = Custom(b =>
         {
-            for (var i = 0; i < 6; i++) b.BugSpawns.Add(new Int2(2 + i * 3, 5));
-            for (var x = 4; x < 16; x++) b.TryWall(x, 8);
+            for (var i = 0; i < 5; i++) b.BugSpawns.Add(new Int2(2 + i * 3, 5));
+            for (var x = 4; x < W - 4; x++) b.TryWall(x, 8);
         });
-        s.Player.Reset(new Int2(18, 28), Direction.Left, 12);
+        s.Player.Reset(new Int2(W - 2, H - 2), Direction.Left, 12);
 
         for (var i = 0; i < 300 && s.Player.Alive; i++)
         {
             // Walk the bottom rows in a loop, far from the bugs.
             var head = s.Player.Head;
-            if (head.X == 1 && s.Player.Heading == Direction.Left) s.Player.QueueTurn(head.Y == 28 ? Direction.Up : Direction.Down);
-            else if (head.X == 18 && s.Player.Heading == Direction.Right) s.Player.QueueTurn(head.Y == 28 ? Direction.Up : Direction.Down);
+            if (head.X == 1 && s.Player.Heading == Direction.Left) s.Player.QueueTurn(head.Y == H - 2 ? Direction.Up : Direction.Down);
+            else if (head.X == W - 2 && s.Player.Heading == Direction.Right) s.Player.QueueTurn(head.Y == H - 2 ? Direction.Up : Direction.Down);
             else if (s.Player.Heading is Direction.Up or Direction.Down) s.Player.QueueTurn(head.X <= 1 ? Direction.Right : Direction.Left);
             s.Step();
             foreach (var bug in s.Bugs)
@@ -461,16 +504,18 @@ public class JourneyTests
     public void Specter_HuntsTheHead_AndIsStunnedByAnApple()
     {
         var s = Custom(b => b.SpecterSpawn = new Int2(2, 3), appleGoal: 3);
-        s.Player.Reset(new Int2(1, 25), Direction.Right, 3);
+        s.Player.Reset(new Int2(1, H - 4), Direction.Right, 3);
         var spawn = s.Specter!.Cell;
 
         for (var i = 0; i < JourneySession.DormantTicks - 1; i++) s.Step();
         Assert.Equal(spawn, s.Specter.Cell); // still waking up
+        s.Player.QueueTurn(Direction.Up);
         for (var i = 0; i < 6; i++) s.Step();
         Assert.True(s.Player.Alive);
+        Assert.NotEqual(spawn, s.Specter.Cell);
         Assert.True(s.Specter.Cell.ManhattanTo(s.Player.Head) < spawn.ManhattanTo(s.Player.Head), "The specter should be closing in.");
 
-        s.PlaceAppleForTest(s.Player.Head + new Int2(1, 0));
+        s.PlaceAppleForTest(s.Player.Head + new Int2(0, -1));
         s.Step();
         Assert.True(s.Specter.Stunned);
         var frozen = s.Specter.Cell;
@@ -503,8 +548,8 @@ public class JourneyTests
     public void Rival_StealsApples_ButNeverCountsForThePlayer_AndStopsGrowing()
     {
         var s = Custom(b => b.RivalSpawn = new SpawnPoint(new Int2(12, 6), Direction.Left), appleGoal: 6);
-        s.PlaceAppleForTest(new Int2(15, 4));
-        s.Player.Reset(new Int2(17, 28), Direction.Right, 3);
+        s.PlaceAppleForTest(new Int2(W - 2, 4));
+        s.Player.Reset(new Int2(W - 3, H - 2), Direction.Right, 3);
         var stolen = 0;
         var eaten = 0;
         Direction[] circle = [Direction.Up, Direction.Left, Direction.Down, Direction.Right];
@@ -675,9 +720,37 @@ public class JourneyTests
                 {
                     Assert.True(stage.IsStaticWall(laser.Emitter));
                     Assert.All(laser.Beam, c => Assert.False(stage.IsStaticWall(c)));
+                    Assert.All(laser.Beam, c => Assert.False(stage.CanHoldItem(c), $"{label}: pickup on the line of fire at {c}"));
                     Assert.True(laser.Period - laser.OnTicks - laser.WarnTicks >= 5, $"{label}: no time to cross a laser");
-                    Assert.True(laser.WarnTicks >= 2);
+                    Assert.True(laser.WarnTicks >= 5, $"{label}: a laser must be seen coming from 5 cells away");
                     Assert.Equal(LaserState.Off, laser.StateAt(0));
+                }
+
+                if (stage.Elements.Contains(StageElement.Lasers))
+                {
+                    var rows = stage.Lasers.Select(l => l.Emitter.Y).Order().ToArray();
+                    for (var i = 1; i < rows.Length; i++)
+                    {
+                        Assert.True(rows[i] - rows[i - 1] >= StageGenerator.LaserRowSpacing, $"{label}: beams on rows {rows[i - 1]} and {rows[i]}");
+                    }
+
+                    // Never more than two rhythms in a stage, however many beams it has.
+                    Assert.InRange(stage.Lasers.Select(l => l.Delay).Distinct().Count(), 1, 2);
+
+                    foreach (var laser in stage.Lasers)
+                    {
+                        // Open far longer than closed, and long enough for a whole snake to go through.
+                        Assert.True(laser.Period - laser.OnTicks >= 15, $"{label}: beam open for {laser.Period - laser.OnTicks} steps only");
+                        Assert.True(laser.OnTicks * 3 <= laser.Period - laser.OnTicks);
+
+                        // There is always a way around: the beam stops short and at least two cells of its row stay
+                        // clear of it, at the far end from the emitter.
+                        var y = laser.Emitter.Y;
+                        var around = Enumerable.Range(0, W).Select(x => new Int2(x, y)).Where(c => !stage.IsStaticWall(c) && !laser.Beam.Contains(c)).ToList();
+                        Assert.True(around.Count >= 2, $"{label}: the beam on row {y} leaves no way around");
+                        var farEdge = new Int2(laser.Emitter.X == 0 ? W - 1 : 0, y);
+                        Assert.Contains(farEdge, around);
+                    }
                 }
 
                 foreach (var saw in stage.Saws)
@@ -690,6 +763,8 @@ public class JourneyTests
                 {
                     Assert.False(stage.IsStaticWall(a));
                     Assert.False(stage.IsStaticWall(b));
+                    Assert.False(stage.IsIce(a) || stage.IsIce(b), $"{label}: teleporter on ice");
+                    Assert.DoesNotContain(stage.Lasers, l => l.Beam.Contains(a) || l.Beam.Contains(b));
                     Assert.Equal(b, stage.TeleportFrom(a));
                     Assert.Equal(a, stage.TeleportFrom(b));
                 }
