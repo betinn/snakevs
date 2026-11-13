@@ -144,7 +144,7 @@ Para compilar na sua máquina: `rustup target add x86_64-unknown-linux-musl`, `p
 
 Atualizar:
 
-- **Jogo**: substitua os arquivos de `/var/www/snakevs`.
+- **Jogo**: substitua os arquivos de `/var/www/snakevs`. Com a esteira (abaixo), isso é automático.
 - **Ranking**: `sudo install -m 755 snakevs-api /usr/local/bin/ && sudo systemctl restart snakevs-api`.
 - O banco não é tocado em nenhum dos dois casos.
 
@@ -153,6 +153,21 @@ Logs: `journalctl -u snakevs-api`. Backup a quente (`sudo apt install sqlite3`):
 Se a VM usa **Apache** em vez de nginx: sirva `/var/www/snakevs` (o `.htaccess` incluído cuida de tipos, `.gz`/`.br` e
 cache) e adicione `ProxyPass "/api/" "http://127.0.0.1:5090/api/"` (`a2enmod proxy proxy_http`); o Apache já acrescenta
 o `X-Forwarded-For` que o limite por IP usa.
+
+### Esteira de deploy (GitHub Actions)
+
+O workflow **deploy** (`.github/workflows/deploy.yml`) publica o jogo quando um PR de um branch `deploy/…` entra no
+`main`. PR de qualquer outro branch não publica nada.
+
+- Gera o site com `dotnet publish` no `ubuntu-24.04` (o mesmo resultado do `build-web.ps1` sem `-ApiUrl`), grava
+  `VERSAO` com o commit e o número do PR e manda o `wwwroot` compactado por SSH. Não roda testes: eles rodam antes,
+  no PR.
+- Endereço, chave e impressão digital do servidor ficam nos secrets `VM_HOST`, `VM_SSH_KEY` e `VM_KNOWN_HOSTS`.
+  Nada disso entra no repositório.
+- No servidor, a chave só consegue entregar o pacote. A pasta do site é trocada de uma vez; se a página nova não
+  responder, a anterior volta e o workflow fica vermelho.
+- `https://<site>/VERSAO` diz o que está no ar.
+- O ranking (`snakevs-api`) fica de fora: continua pelo workflow **ranking-api** e pela instalação acima.
 
 ### Sem ranking ou em host estático
 

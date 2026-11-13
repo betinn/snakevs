@@ -1,0 +1,63 @@
+# Publishes the web game when a pull request from a deploy/* branch is merged into main.
+# It only builds the static site and sends it over SSH; it does not run the tests (CI and the PR do that).
+# Server address, key and host fingerprint are repository secrets (VM_HOST, VM_SSH_KEY, VM_KNOWN_HOSTS).
+# On the server the key can only hand over the package: the site folder is swapped in one go, the new page is
+# checked and, if it does not answer, the previous version comes back.
+# The ranking server (src/SnakeVs.Api) is not part of this: see the ranking-api workflow and docs/WEB.md.
+name: deploy
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'deploy/') &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          persist-credentials: false
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build package
+        run: |
+          set -euo pipefail
+          # Same output as scripts/build-web.ps1 without -ApiUrl: the ranking is served by the same site (/api/).
+          dotnet publish src/SnakeVs.Web/SnakeVs.Web.csproj -c Release -o publish
+          echo "${GITHUB_SHA::7} (PR #${{ github.event.pull_request.number }})" > publish/wwwroot/VERSAO
+          # The root folder of the package is dropped on extraction: the contents of wwwroot/ become the site.
+          tar -czf snakevs.tar.gz -C publish wwwroot
+          ls -lh snakevs.tar.gz
+
+      - name: Send to the server
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_SSH_KEY: ${{ secrets.VM_SSH_KEY }}
+          VM_KNOWN_HOSTS: ${{ secrets.VM_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$VM_SSH_KEY" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          printf '%s\n' "$VM_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          # The key only accepts the game's package on standard input.
+          ssh -i ~/.ssh/deploy -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=30 "deploy@$VM_HOST" < snakevs.tar.gz
+          rm -f ~/.ssh/deploy
